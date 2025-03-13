@@ -55,8 +55,9 @@ class ReservationContentsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReservationContents
         
-        fields = ['id', 'house', 'beds', 'price', 'address', 'state',
-                  'ratings_reviews', 'country', 'images', 'average_rating',
+        fields = ['id', 'house', 'beds', 'price', 'address', 'state', 'swimmingpool',
+                  'wifi','ratings_reviews', 'country', 
+                  'images', 'average_rating',
                   'likes_count', 'description', 'status']  
 
     def get_likes_count(self, obj):
@@ -88,12 +89,12 @@ class PostRatingSerializer(serializers.ModelSerializer):
 
 
 class PostLikeSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField()  # Display username
-    post = serializers.PrimaryKeyRelatedField(queryset=ReservationContents.objects.all())
+    # user = serializers.StringRelatedField()  # Display username
+    post = ReservationContentsSerializer()
 
     class Meta:
         model = PostLike
-        fields = ['id', 'user', 'post', 'created_at']
+        fields = ['id', 'post', 'created_at']
 
    
 

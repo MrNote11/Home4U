@@ -149,7 +149,7 @@ class LoginView(views.APIView):
             # Check if the user has a profile and save it
             try:
                 user_profile = user.userprofile
-                profile_image = user_profile.profile_image.url if user_profile.profile_image else None
+                profile_image = request.build_absolute_uri(user_profile.profile_image.url) if user_profile.profile_image else None
             except UserProfile.DoesNotExist:
                 profile_image = None
 

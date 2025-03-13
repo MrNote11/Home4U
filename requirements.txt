@@ -13,9 +13,9 @@ django-filter
 djangorestframework-simplejwt
 cryptography
 cryptography==3.4.8
-djangorestframework-simplejwt[cryptography]
 djangorestframework-simplejwt[crypto]
 drf-nested-routers
+dj-database-url
 
 #get absolute url:
   #this gives us the absolute path details of the url object instance.

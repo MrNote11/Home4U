@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from datetime import timedelta
 import os
 from pathlib import Path
+import dj_database_url
 
 OTP_LIMIT_TRY = 3
 
@@ -78,9 +79,11 @@ EMAIL_HOST_PASSWORD = 'otyd hdzx efag wlem'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+    
     'django.middleware.common.CommonMiddleware',
     
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -148,11 +151,13 @@ DATABASES = {
         'NAME': 'Home4U',
         'USER': 'postgres',
         'PASSWORD': 'MrNote11',
-        'HOST': 'localhost',
+        'HOST': 'postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u',
         'PORT': '5432'
     }
 }
 
+DATABASES['default'] = dj_database_url.parse("postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u")
+"postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u"
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -190,6 +195,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR/ 'assets'
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
