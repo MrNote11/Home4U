@@ -12,12 +12,11 @@ class ReservationImagesSerializer(serializers.ModelSerializer):
         model = ReservationImages
         fields = ['image_url']
 
-
 class ReservationDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReservationDetails
         fields = ('first_name', 'last_name', 'phone_number', 'email')
-
+        
     def validate_phone_number(self, value):
         """Validate phone number format"""
         phone_pattern = r'^\+?1?\d{9,15}$'  # Validates phone numbers like +123456789 or 123456789

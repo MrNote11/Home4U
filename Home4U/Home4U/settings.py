@@ -29,7 +29,8 @@ SECRET_KEY = 'django-insecure-)^4y*&7o&-evc(k62#*3gr4lzz0@89#fnew7u=)wjhii5m-x^!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*', "2906-105-112-203-225.ngrok-free.app"]
+ALLOWED_HOSTS = ['*', "2906-105-112-203-225.ngrok-free.app", "127.0.0.1",
+                 "https://home4u-3.onrender.com/"]
 
 
 # Application definition
@@ -151,13 +152,13 @@ DATABASES = {
         'NAME': 'Home4U',
         'USER': 'postgres',
         'PASSWORD': 'MrNote11',
-        'HOST': 'postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u',
+        'HOST': 'localhost',#postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u',
         'PORT': '5432'
     }
 }
 
-DATABASES['default'] = dj_database_url.parse("postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u")
-"postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u"
+# DATABASES['default'] = dj_database_url.parse("postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u")
+# "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u"
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
