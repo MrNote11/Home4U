@@ -105,19 +105,24 @@ resend_otp = ResendOTPView.as_view()
 
 class UpdateView(APIView):
     permission_classes = [IsAuthenticated]
+
     def patch(self, request):
         try:
             profile = UserProfile.objects.get(user=request.user)
         except UserProfile.DoesNotExist:
             raise NotFound("User profile does not exist.")
+
         serializer = UpdateSerializers(profile, data=request.data, partial=True, context={'request': request})
+
         if serializer.is_valid():
             serializer.save()
             return Response({
                 "message": "Profile updated successfully",
                 "data": serializer.data
             }, status=status.HTTP_200_OK)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 update = UpdateView.as_view()     
 

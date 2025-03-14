@@ -58,23 +58,26 @@ class OTPVerificationSerializers(serializers.Serializer):
 class UpdateSerializers(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', required=False)
     email = serializers.EmailField(source='user.email', required=False)
-    profile_image = serializers.ImageField(required=False) # make optional.
+    profile_image = serializers.ImageField(required=False)  # Make optional.
 
     class Meta:
         model = UserProfile
         fields = ['username', 'email', 'profile_image']
-        
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
+        request = self.context.get('request')
         if instance.profile_image:
-            representation['profile_image'] = instance.profile_image.url
+            representation['profile_image'] = request.build_absolute_uri(instance.profile_image.url)
         return representation
-        
+
     def update(self, instance, validated_data):
-        user_data = validated_data.get('user', {})
-        instance.user.username = user_data.get('username', instance.user.username)
-        instance.user.email = user_data.get('email', instance.user.email)
-        instance.user.save()
+        user_data = validated_data.get('user')
+        if user_data:
+            instance.user.username = user_data.get('username', instance.user.username)
+            instance.user.email = user_data.get('email', instance.user.email)
+            instance.user.save()
+
         instance.profile_image = validated_data.get('profile_image', instance.profile_image)
         instance.save()
         return instance
