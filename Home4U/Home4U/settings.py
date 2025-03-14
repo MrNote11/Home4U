@@ -144,24 +144,27 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Home4U.wsgi.application'
 
 
+# DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u").decode("utf-8") if isinstance(os.getenv("DATABASE_URL", "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u"), bytes) else os.getenv("DATABASE_URL", "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u")
+
+
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-if not DEBUG:
+if DEBUG:
     DATABASES ={
-        "default": dj_database_url.parse(os.environ.get("DATABASE_URL"))
-    }
+            "default": dj_database_url.parse(os.environ.get("DATABASE_URL"))
+        }
 else:   
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': 'Home4U',
-            'USER': 'postgres',
-            'PASSWORD': 'MrNote11',
-            'HOST': 'localhost',#postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u',
-            'PORT': '5432'
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql_psycopg2',
+                'NAME': 'Home4U',
+                'USER': 'postgres',
+                'PASSWORD': 'MrNote11',
+                'HOST': 'localhost',
+                'PORT': '5432'
+            }
         }
-    }
 
 # DATABASES['default'] = dj_database_url.parse("postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u")
 # "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u"
