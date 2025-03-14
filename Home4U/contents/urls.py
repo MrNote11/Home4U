@@ -14,25 +14,25 @@ from .views import (CreateGuests, ReservationRatingView, #likedpost,
                     HomeViewdetails, TopHomeView,
                                      CustomerDetailsViews,
                     FilteredPostRatingsView)#, likedview)
-router = routers.DefaultRouter()
-router.register('reservation', HomeView)
+
 
 urlpatterns = [
-    path('reservation/', HomeView.as_view(), name='home'),
-    path('reservation/<int:pk>/', HomeViewdetails.as_view(), name='description'),
-    path('reservation/<int:post_pk>/create/', CreateGuests.as_view(), name='create'),
-    path('reservation/<int:pk>/like/', LikePostView.as_view(), name='house_like'),
-    path('reservation/likedview/', UserLikedPostsView.as_view(), name='likedview'),
-    path('reservation/<int:pk>/delete/', UnlikePostView.as_view(), name='deletelike'),
-    path('reservation/newly/', TopHomeView.as_view(), name='new_posts'),
-    path('reservation/<int:post_pk>/ratings/', ReservationRatingView.as_view(), name='rating_posts'),
-    path('reservation/<int:post_id>/customer_input/', CustomerDetailsViews.as_view(), name='customer-input'),
-    path('reservation/top_post/', FilteredPostRatingsView.as_view(), name='top-post'),
-    path('reservation/ratings/', FilteredPostRatingsView.as_view(), name='filtered-post-ratings'),
+    path('', HomeView.as_view(), name='home'),
+    path('<int:pk>/', HomeViewdetails.as_view(), name='description'),
+    path('<int:post_pk>/create/', CreateGuests.as_view(), name='create'),
+    path('<int:pk>/like/', LikePostView.as_view(), name='house_like'),
+    path('likedview/', UserLikedPostsView.as_view(), name='likedview'),
+    path('<int:pk>/delete/', UnlikePostView.as_view(), name='deletelike'),
+    path('newly/', TopHomeView.as_view(), name='new_posts'),
+    path('<int:post_pk>/ratings/', ReservationRatingView.as_view(), name='rating_posts'),
+    path('<int:post_id>/customer_input/', CustomerDetailsViews.as_view(), name='customer-input'),
+    path('top_post/', FilteredPostRatingsView.as_view(), name='top-post'),
+    path('ratings/', FilteredPostRatingsView.as_view(), name='filtered-post-ratings'),
 
 ]
-if settings.DEBUG:
+# if settings.DEBUG:
   
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    #https://documenter.getpostman.com/view/39412368/2sAYXBFyoT
+    # urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    # urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    
+    
