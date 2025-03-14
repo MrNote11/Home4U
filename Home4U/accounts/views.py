@@ -23,23 +23,43 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from django.shortcuts import redirect
 
+
 class UserRegister(APIView):
     def post(self, request):
         serializer = UserSerializers(data=request.data, context={'request': request})
-        
-        if serializer.is_valid(raise_exception=True):
-            user = serializer.save()
-            user.is_active = False  # Make user inactive initially
-            user.save()
 
-            otp_instance = OTP.objects.create(user=user)
-            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-            token = otp_instance.otp
-            verification_link = request.build_absolute_uri(
-                reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token})
-            )
+        if serializer.is_valid(raise_exception=True):
+            email = serializer.validated_data['email']
+            username = serializer.validated_data['username']
 
             try:
+                user = User.objects.get(email=email)
+                if user.is_active:
+                    return Response({"message": "User already registered and active."}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    # Resend OTP
+                    OTP.objects.filter(user=user, is_used=False, expires_at__lt=timezone.now()).delete()
+                    otp_instance = OTP.objects.create(user=user)
+                    uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+                    token = otp_instance.otp
+                    verification_link = request.build_absolute_uri(reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token}))
+                    send_mail(
+                        'Verify Your Account (New OTP)',
+                        f'Click the following link within 10 minutes to verify your account: {verification_link}',
+                        settings.EMAIL_HOST_USER,
+                        [user.email],
+                        fail_silently=False
+                    )
+                    return Response({"message": "New verification link sent."}, status=status.HTTP_200_OK)
+
+            except User.DoesNotExist:
+                user = serializer.save()
+                user.is_active = False
+                user.save()
+                otp_instance = OTP.objects.create(user=user)
+                uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+                token = otp_instance.otp
+                verification_link = request.build_absolute_uri(reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token}))
                 send_mail(
                     'Verify Your Account',
                     f'Click the following link within 10 minutes to verify your account: {verification_link}',
@@ -47,48 +67,40 @@ class UserRegister(APIView):
                     [user.email],
                     fail_silently=False
                 )
+                return Response({"message": "Verification link sent. Click within 10 minutes.", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
-                return Response({
-                    "message": "Verification link sent. Click within 10 minutes.",
-                    "data": serializer.data
-                }, status=status.HTTP_201_CREATED)
-
-            except Exception as err:
-                print(err)
-        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    
 signup = UserRegister.as_view()
 
-class ResendOTPView(views.APIView):
+class ResendOTPView(APIView):
     def post(self, request):
-        serializer = ResendOTPSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            email = serializer.validated_data['email']
-            try:
-                user = User.objects.get(email=email)
-                if user.is_active:
-                    return Response({"message": "User is already active."}, status=status.HTTP_400_BAD_REQUEST)
+        email = request.data.get('email')
+        if not email:
+            return Response({"message": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-                OTP.objects.filter(user=user, is_used=False, expires_at__lt=timezone.now()).delete()
-                otp_instance = OTP.objects.create(user=user)
-                uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-                token = otp_instance.otp
-                verification_link = request.build_absolute_uri(
-                    reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token})
-                )
-                send_mail(
-                    'Verify Your Account (New OTP)',
-                    f'Click the following link within 10 minutes to verify your account: {verification_link}',
-                    settings.EMAIL_HOST_USER,
-                    [user.email],
-                    fail_silently=False
-                )
-                return Response({"message": "New verification link sent."}, status=status.HTTP_200_OK)
-            except User.DoesNotExist:
-                return Response({"message": "User not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user = User.objects.get(email=email)
+            if user.is_active:
+                return Response({"message": "User is already active."}, status=status.HTTP_400_BAD_REQUEST)
 
+            OTP.objects.filter(user=user, is_used=False, expires_at__lt=timezone.now()).delete()
+            otp_instance = OTP.objects.create(user=user)
+            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+            token = otp_instance.otp
+            verification_link = request.build_absolute_uri(reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token}))
+            send_mail(
+                'Verify Your Account (New OTP)',
+                f'Click the following link within 10 minutes to verify your account: {verification_link}',
+                settings.EMAIL_HOST_USER,
+                [user.email],
+                fail_silently=False
+            )
+            return Response({"message": "New verification link sent."}, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            return Response({"message": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        
 resend_otp = ResendOTPView.as_view()
 
 class UpdateView(APIView):
