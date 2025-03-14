@@ -79,9 +79,9 @@ EMAIL_HOST_USER = 'aliyahsulaiman3@gmail.com'
 EMAIL_HOST_PASSWORD = 'otyd hdzx efag wlem'
 
 MIDDLEWARE = [
-    # 'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     
-    # 'django.middleware.common.CommonMiddleware',
+    'django.middleware.common.CommonMiddleware',
     
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
