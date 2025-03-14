@@ -151,7 +151,7 @@ WSGI_APPLICATION = 'Home4U.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 if DEBUG:
-    DATABASES ={
+    DATABASES = {
             "default": dj_database_url.parse(os.environ.get("DATABASE_URL"))
         }
 else:   
@@ -203,7 +203,7 @@ USE_TZ = True
 # Static Files Configuration
 STATIC_URL = '/static/'  # URL prefix for static files
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Development static folder
-# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Collects static files for production
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Collects static files for production
 
 # Media Files Configuration (For Uploaded Images)
 MEDIA_URL = '/media/'  # URL prefix for media files
