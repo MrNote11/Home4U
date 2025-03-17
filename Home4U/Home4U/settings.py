@@ -150,12 +150,11 @@ WSGI_APPLICATION = 'Home4U.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-if DEBUG:
-    DATABASES = {
-            "default": dj_database_url.parse(os.environ.get("DATABASE_URL"))
+if not DEBUG:
+    DATABASES ={
+            "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
         }
 else:   
-    
     DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -167,7 +166,7 @@ else:
             }
         }
 
-# DATABASES['default'] = dj_database_url.parse("postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u")
+DATABASES['default'] = dj_database_url.parse("postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u")
 # "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u"
 
 # Password validation
@@ -202,7 +201,7 @@ USE_TZ = True
 
 # Static Files Configuration
 STATIC_URL = '/static/'  # URL prefix for static files
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Development static folder
+#STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Development static folder
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Collects static files for production
 
 # Media Files Configuration (For Uploaded Images)

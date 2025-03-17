@@ -31,12 +31,13 @@ class UserRegister(APIView):
         if serializer.is_valid(raise_exception=True):
             email = serializer.validated_data['email']
             username = serializer.validated_data['username']
+            resend = request.query_params.get('resend') == 'true'
 
             try:
                 user = User.objects.get(email=email)
                 if user.is_active:
                     return Response({"message": "User already registered and active."}, status=status.HTTP_400_BAD_REQUEST)
-                else:
+                elif resend:
                     # Resend OTP
                     OTP.objects.filter(user=user, is_used=False, expires_at__lt=timezone.now()).delete()
                     otp_instance = OTP.objects.create(user=user)
@@ -51,6 +52,8 @@ class UserRegister(APIView):
                         fail_silently=False
                     )
                     return Response({"message": "New verification link sent."}, status=status.HTTP_200_OK)
+                else:
+                    return Response({"message": "User already registered, but not activated. Please use resend=true query parameter"}, status=status.HTTP_400_BAD_REQUEST)
 
             except User.DoesNotExist:
                 user = serializer.save()
@@ -70,38 +73,8 @@ class UserRegister(APIView):
                 return Response({"message": "Verification link sent. Click within 10 minutes.", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
 signup = UserRegister.as_view()
-
-class ResendOTPView(APIView):
-    def post(self, request):
-        email = request.data.get('email')
-        if not email:
-            return Response({"message": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            user = User.objects.get(email=email)
-            if user.is_active:
-                return Response({"message": "User is already active."}, status=status.HTTP_400_BAD_REQUEST)
-
-            OTP.objects.filter(user=user, is_used=False, expires_at__lt=timezone.now()).delete()
-            otp_instance = OTP.objects.create(user=user)
-            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-            token = otp_instance.otp
-            verification_link = request.build_absolute_uri(reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token}))
-            send_mail(
-                'Verify Your Account (New OTP)',
-                f'Click the following link within 10 minutes to verify your account: {verification_link}',
-                settings.EMAIL_HOST_USER,
-                [user.email],
-                fail_silently=False
-            )
-            return Response({"message": "New verification link sent."}, status=status.HTTP_200_OK)
-
-        except User.DoesNotExist:
-            return Response({"message": "User not found."}, status=status.HTTP_404_NOT_FOUND)
-        
-resend_otp = ResendOTPView.as_view()
 
 class UpdateView(APIView):
     permission_classes = [IsAuthenticated]

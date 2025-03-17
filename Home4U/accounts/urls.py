@@ -9,7 +9,7 @@ from .views import (
     LogoutView,
     update,
     VerifyOTPView,
-    resend_otp
+
     
     # profile
     # customdetails
@@ -29,7 +29,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),  # User logout
     path('update-profile/', update, name='update'),
     path('verify-otp/<str:uidb64>/<str:token>/', VerifyOTPView.as_view(), name='verify-otp'),
-    path('resend-otp/', resend_otp, name='resend-otp'),
+    # path('resend-otp/', resend_otp, name='resend-otp'),
 
     
     # path('profile/', profile, name='profile')
