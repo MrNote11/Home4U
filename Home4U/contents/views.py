@@ -22,31 +22,69 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Avg, Count
 
 
-class HomeView(generics.ListAPIView):
-    queryset = ReservationContents.objects.all().order_by("created")
+from rest_framework import generics, filters, status
+from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import ReservationContents, PostRating
+from .serializers import ReservationContentsSerializer
+from .filters import ReservationFilter
+from .paginations import Limits
+from rest_framework.permissions import IsAuthenticated
+from django.db.models import Avg
+
+class HomeViews(generics.ListAPIView):
     serializer_class = ReservationContentsSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = Limits
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = ReservationFilter
-    pagination_class = Limits
-    lookup_field = 'pk'
-    permission_classes = [IsAuthenticated]
     search_fields = ['house', 'state']
-    
 
+    def get_queryset(self):
+        queryset = ReservationContents.objects.all()
+
+        if self.request.query_params.get('homepage'):
+            reservation_id = self.request.query_params.get('id')
+            if reservation_id:
+                try:
+                    return ReservationContents.objects.filter(id=reservation_id)
+                except ValueError:
+                    return ReservationContents.objects.none()
+            return queryset.order_by("created")
+
+        elif self.request.query_params.get('newly added'):
+            return queryset.order_by("-created")
+
+        elif self.request.query_params.get('ratings'):
+            posts_with_ratings = PostRating.objects.filter(ratings__gte=3)
+            queryset = queryset.filter(id__in=posts_with_ratings.values('post'))
+            return queryset.annotate(average_rating=Avg('ratings'))
+
+        return ReservationContents.objects.none()  # Return empty if no valid query parameters
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        if queryset.exists():
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        else:
+            return Response({"message": "Invalid query parameters."}, status=status.HTTP_400_BAD_REQUEST)
+       
 
 class HomeViewdetails(generics.RetrieveAPIView):
-    queryset = ReservationContents.objects.all().order_by
+    queryset = ReservationContents.objects.all()
     serializer_class = ReservationContentsSerializer
     pagination_class = Limits
     lookup_field = 'pk'
     permission_classes = [IsAuthenticated]
 
 
-class TopHomeView(generics.ListAPIView):
-    queryset = ReservationContents.objects.all().order_by("-created")
-    serializer_class = ReservationContentsSerializer
-    pagination_class = Limits
-    permission_classes = [IsAuthenticated]    
+
 
 
 class CreateGuests(generics.CreateAPIView):
@@ -76,28 +114,6 @@ class CreateGuests(generics.CreateAPIView):
 
 
 
-class FilteredPostRatingsView(generics.ListAPIView):
-    serializer_class = ReservationContentsSerializer#PostRatingSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        # Filter posts that have an average rating of 3.5 or more from all users
-        posts_with_ratings = PostRating.objects.filter(ratings__gte=3)
-
-        # Aggregate to get the average rating and rating count for each post
-        posts = ReservationContents.objects.filter(id__in=posts_with_ratings.values('post'))
-        
-        # Annotate posts with average rating and rating count
-        posts = posts.annotate(
-            average_rating=Avg('ratings'),
-            # rating_count=Count('ratings')
-        )
-        return posts
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
 
 
 class LikePostView(APIView):

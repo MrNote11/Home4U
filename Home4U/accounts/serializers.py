@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import OTP, UserProfile
+from .models import  UserProfile
 from django.contrib.auth import authenticate
 
 User = get_user_model()
