@@ -20,17 +20,6 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Avg, Count
 
 
-from rest_framework import generics, filters, status
-from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from .models import ReservationContents, PostRating
-from .serializers import ReservationContentsSerializer
-from .filters import ReservationFilter
-from .paginations import Limits
-from rest_framework.permissions import IsAuthenticated
-from django.db.models import Avg
-
-
 class HomeViews(generics.ListAPIView):
     serializer_class = ReservationContentsSerializer
     permission_classes = [IsAuthenticated]
@@ -41,30 +30,26 @@ class HomeViews(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = ReservationContents.objects.all().annotate(
-            average_rating=Avg('ratings__ratings') 
+            average_rating=Avg('ratings__ratings')*1
         )
         query_params = self.request.query_params
 
-        if query_params.get('homepage'):
+        if query_params.get('homepage') == 'home':
             reservation_id = query_params.get('id')
             if reservation_id and reservation_id.isdigit():
-                return queryset.filter(id=int(reservation_id)).annotate(
-                    average_rating=Avg('ratings__ratings')
-                )
-            return queryset.order_by("created").annotate(
-                average_rating=Avg('ratings__ratings')
-            )
+                return queryset.filter(id=int(reservation_id))
+            return queryset.order_by("created")
 
-        if query_params.get('newly_added'):
-            return queryset.order_by("-created").annotate(
-                average_rating=Avg('ratings__ratings')
-            )
+        elif query_params.get('homepage') == 'newly added':
+            return queryset.order_by("-created")
 
-        if query_params.get('ratings'):
+        elif query_params.get('homepage') == 'ratings':
             post_ids = PostRating.objects.filter(ratings__gte=3).values_list('post_id', flat=True)
             return queryset.filter(id__in=post_ids)
 
-        return queryset 
+        return ReservationContents.objects.none()  # ✅ Corrected this line
+  # Fixed syntax
+
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
