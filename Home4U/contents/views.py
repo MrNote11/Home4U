@@ -15,9 +15,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .filters import ReservationFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound
-from .serializers import UserPostRatingSerializer
 from .models import PostRating, ReservationContents, PostLike
-from .serializers import PostRatingSerializer
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Avg, Count
 
@@ -32,6 +30,7 @@ from .paginations import Limits
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Avg
 
+
 class HomeViews(generics.ListAPIView):
     serializer_class = ReservationContentsSerializer
     permission_classes = [IsAuthenticated]
@@ -41,48 +40,45 @@ class HomeViews(generics.ListAPIView):
     search_fields = ['house', 'state']
 
     def get_queryset(self):
-        queryset = ReservationContents.objects.all()
+        queryset = ReservationContents.objects.all().annotate(
+            average_rating=Avg('ratings__ratings') 
+        )
+        query_params = self.request.query_params
 
-        if self.request.query_params.get('homepage'):
-            reservation_id = self.request.query_params.get('id')
-            if reservation_id:
-                try:
-                    return ReservationContents.objects.filter(id=reservation_id)
-                except ValueError:
-                    return ReservationContents.objects.none()
-            return queryset.order_by("created")
+        if query_params.get('homepage'):
+            reservation_id = query_params.get('id')
+            if reservation_id and reservation_id.isdigit():
+                return queryset.filter(id=int(reservation_id)).annotate(
+                    average_rating=Avg('ratings__ratings')
+                )
+            return queryset.order_by("created").annotate(
+                average_rating=Avg('ratings__ratings')
+            )
 
-        elif self.request.query_params.get('newly added'):
-            return queryset.order_by("-created")
+        if query_params.get('newly_added'):
+            return queryset.order_by("-created").annotate(
+                average_rating=Avg('ratings__ratings')
+            )
 
-        elif self.request.query_params.get('ratings'):
-            posts_with_ratings = PostRating.objects.filter(ratings__gte=3)
-            queryset = queryset.filter(id__in=posts_with_ratings.values('post'))
-            return queryset.annotate(average_rating=Avg('ratings'))
+        if query_params.get('ratings'):
+            post_ids = PostRating.objects.filter(ratings__gte=3).values_list('post_id', flat=True)
+            return queryset.filter(id__in=post_ids)
 
-        return ReservationContents.objects.none()  # Return empty if no valid query parameters
+        return queryset 
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        if queryset.exists():
-            page = self.paginate_queryset(queryset)
-            if page is not None:
-                serializer = self.get_serializer(page, many=True)
-                return self.get_paginated_response(serializer.data)
 
-            serializer = self.get_serializer(queryset, many=True)
-            return Response(serializer.data)
-        else:
-            return Response({"message": "Invalid query parameters."}, status=status.HTTP_400_BAD_REQUEST)
-       
+        if not queryset.exists():
+            return Response({"message": "No results found."}, status=status.HTTP_404_NOT_FOUND)
 
-class HomeViewdetails(generics.RetrieveAPIView):
-    queryset = ReservationContents.objects.all()
-    serializer_class = ReservationContentsSerializer
-    pagination_class = Limits
-    lookup_field = 'pk'
-    permission_classes = [IsAuthenticated]
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 

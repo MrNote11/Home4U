@@ -13,7 +13,7 @@ class VerificationToken(models.Model):
         REGISTERATION = "RG", 'Registration',
         PASSWORD_RESET = "PR", 'Password_Reset'
         
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)  # Unique token
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(blank=True, null=True)  # Expiry time

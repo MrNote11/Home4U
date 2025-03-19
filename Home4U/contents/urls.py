@@ -1,22 +1,16 @@
 from django.urls import path, include
-from .views import  (HomeViews, CreateGuests,   #deletelikepost,
-                    # likedpost, likedview,
-                    #  new_post, rating, top_post, top_rating,
-                     )
 from django.conf import settings
 from django.conf.urls.static import static
-from rest_framework import routers
-from rest_framework_nested.routers import NestedDefaultRouter
 from .views import (CreateGuests, ReservationRatingView, #likedpost,
                     LikePostView, UserLikedPostsView,
                     UnlikePostView, HomeViews,
-                    HomeViewdetails, 
-                                     CustomerDetailsViews,)#, likedview)
+                    #HomeViewdetails, 
+                                     CustomerDetailsViews,)
 
 
 urlpatterns = [
     path('', HomeViews.as_view(), name='home'),
-    path('<int:pk>/', HomeViewdetails.as_view(), name='description'),
+    # path('<int:pk>/', HomeViewdetails.as_view(), name='description'),
     path('<int:post_pk>/create/', CreateGuests.as_view(), name='create'),
     path('<int:pk>/like/', LikePostView.as_view(), name='house_like'),
     path('likedview/', UserLikedPostsView.as_view(), name='likedview'),

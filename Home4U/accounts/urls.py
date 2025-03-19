@@ -28,7 +28,7 @@ urlpatterns = [
     path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),  # Reset Password
     path('logout/', LogoutView.as_view(), name='logout'),  # User logout
     path('update-profile/', update, name='update'),
-    path('verify-otp/<str:uidb64>/<str:token>/', VerifyOTPView.as_view(), name='verify-otp'),
+    path('verify-otp/<str:uidb64>/<uuid:token>/', VerifyOTPView.as_view(), name='verify-otp'),
     # path('resend-otp/', resend_otp, name='resend-otp'),
 
     

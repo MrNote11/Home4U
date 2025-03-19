@@ -46,14 +46,13 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
 
 class ReservationContentsSerializer(serializers.ModelSerializer):
     likes_count = serializers.SerializerMethodField()
-    images = ReservationImagesSerializer(many=True)  # Serialize many images
+    images = ReservationImagesSerializer(many=True) 
     # ratings_counts = serializers.SerializerMethodField()
     ratings_reviews = serializers.SerializerMethodField()
     average_rating = serializers.FloatField(read_only=True)
     
     class Meta:
         model = ReservationContents
-        
         fields = ['id', 'house', 'beds', 'price', 'address', 'state', 'swimmingpool',
                   'wifi','ratings_reviews', 'country', 
                   'images', 'average_rating',
@@ -78,17 +77,8 @@ class ReservationContentsSerializer(serializers.ModelSerializer):
         return 0
 
 
-class PostRatingSerializer(serializers.ModelSerializer):
-    post = ReservationContentsSerializer()
-    rating_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = ReservationContents
-        fields = ['id', 'house', 'state', 'country', 'average_rating', 'rating_count']
-
 
 class PostLikeSerializer(serializers.ModelSerializer):
-    # user = serializers.StringRelatedField()  # Display username
     post = ReservationContentsSerializer()
 
     class Meta:
@@ -147,22 +137,4 @@ class GuestsSerializers(serializers.ModelSerializer):
         )
         return post_rating
 
-class UserPostRatingSerializer(serializers.ModelSerializer):
-    # Serialize the related ReservationContents data (Post)
-    post = ReservationContentsSerializer()
-    
-    class Meta:
-        model = PostRating
-        fields = ['post', 'ratings', 'check_in', 'check_out', 'first_name', 'last_name', 'phone_number', 'guests']
 
-    def to_representation(self, instance):
-        user = self.context.get('user')  # Get the authenticated user from context
-        post = self.context.get('post')  # Get the related ReservationContents instance
-        
-        # Return a representation that includes both the rating and the related post data
-        return {
-            'user': user,
-            'house': post.house,
-            'address': post.address,
-
-        }

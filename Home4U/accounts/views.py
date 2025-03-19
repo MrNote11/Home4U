@@ -7,14 +7,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 
 from .serializers import (UserSerializers,
-                          UpdateSerializers, ResendOTPSerializer,
+                          UpdateSerializers,
                           ForgotPasswordSerializer, ResetPasswordSerializer,
                           LoginSerializer, LogoutSerializer)
 
 from .models import VerificationToken, UserProfile
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied, NotFound
-from django.core.mail import send_mail
+from rest_framework.exceptions import  NotFound
 from django.conf import settings
 from django.urls import reverse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -22,7 +21,12 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.utils import timezone
 from django.shortcuts import redirect
+from django.utils.encoding import force_bytes
+import uuid
 
+
+
+from datetime import timedelta
 
 class UserRegister(APIView):
     def post(self, request):
@@ -32,17 +36,21 @@ class UserRegister(APIView):
             email = serializer.validated_data['email']
             username = serializer.validated_data['username']
             resend = request.query_params.get('resend') == 'true'
-            purpose= VerificationToken.Choices.REGISTERATION
+            purpose = VerificationToken.Choices.REGISTERATION
+
             try:
                 user = User.objects.get(email=email)
                 if user.is_active:
                     return Response({"message": "User already registered and active."}, status=status.HTTP_400_BAD_REQUEST)
                 elif resend:
-                    # Resend OTP
-                    VerificationToken.objects.filter(user=user, is_used=False, expires_at__lt=timezone.now()).delete()
-                    token, created = VerificationToken.objects.get_or_create(user=user, purpose=purpose)
+                    # Delete old expired tokens
+                    VerificationToken.objects.filter(user=user, is_used=False).exclude(expires_at__gte=timezone.now()).delete()
+
+                    # Create a new verification token
+                    token = VerificationToken.objects.create(user=user, purpose=purpose)
                     uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-                    verification_link = request.build_absolute_uri(reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token}))
+
+                    verification_link = request.build_absolute_uri(reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token.token}))
                     send_mail(
                         'Verify Your Account (New OTP)',
                         f'Click the following link within 10 minutes to verify your account: {verification_link}',
@@ -52,15 +60,18 @@ class UserRegister(APIView):
                     )
                     return Response({"message": "New verification link sent."}, status=status.HTTP_200_OK)
                 else:
-                    return Response({"message": "User already registered, but not activated. Please use resend=true query parameter"}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"message": "User already registered but not activated. Please use resend=true query parameter."}, status=status.HTTP_400_BAD_REQUEST)
 
             except User.DoesNotExist:
                 user = serializer.save()
                 user.is_active = False
                 user.save()
-                token, created = VerificationToken.objects.get_or_create(user=user, purpose=purpose)
+
+                # Create a verification token
+                token = VerificationToken.objects.create(user=user, purpose=purpose)
                 uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-                verification_link = request.build_absolute_uri(reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token}))
+
+                verification_link = request.build_absolute_uri(reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token.token}))
                 send_mail(
                     'Verify Your Account',
                     f'Click the following link within 10 minutes to verify your account: {verification_link}',
@@ -72,16 +83,17 @@ class UserRegister(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 signup = UserRegister.as_view()
 
-  
+
 
 class VerifyOTPView(APIView):
     def get(self, request, uidb64, token):
         try:
-            user_id = force_str(urlsafe_base64_decode(uidb64))
-            user = User.objects.get(pk=user_id)
-            verification_token = VerificationToken.objects.get(user=user, token=token, is_used=False)
+            decoded_uid = urlsafe_base64_decode(uidb64).decode()
+            user = User.objects.get(pk=decoded_uid)
+            verification_token = VerificationToken.objects.filter(user=user, token=token, is_used=False).latest('created_at')
 
             if verification_token.is_expired():
                 user.delete()
@@ -89,19 +101,19 @@ class VerifyOTPView(APIView):
 
             user.is_active = True
             user.save()
-            verification_token.is_used = True
-            verification_token.delete()
-            
-            
-            # Redirect with query parameters
-            vercel_url = settings.VERCEL_APP_URL  # Get the base URL from settings
-            redirect_url = f"{vercel_url}/?verified=true&email={user.email}"
 
+            verification_token.is_used = True
+            verification_token.save()
+
+            vercel_url = getattr(settings, "VERCEL_APP_URL", None)
+            if not vercel_url:
+                return Response({"message": "Redirect URL is missing."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            redirect_url = f"{vercel_url}/?verified=true&email={user.email}"
             return redirect(redirect_url)
 
-        except (User.DoesNotExist, VerificationToken.DoesNotExist):
+        except (User.DoesNotExist, VerificationToken.DoesNotExist, ValueError):
             return Response({"message": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class LoginView(views.APIView):
     def post(self, request):
