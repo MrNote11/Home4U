@@ -74,6 +74,9 @@ class PostRating(models.Model):
         validators=(MinValueValidator(1), MaxValueValidator(5)),
         null=True
     )
+    
+    class Meta:
+        unique_together = ('post', 'user')
 
     def __str__(self):
         return f"{self.user} - {self.ratings} for apartment: {self.post}"

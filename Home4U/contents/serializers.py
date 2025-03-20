@@ -59,7 +59,8 @@ class ReservationContentsSerializer(serializers.ModelSerializer):
                   'likes_count', 'description', 'status']  
 
     def get_likes_count(self, obj):
-        return PostRating.objects.filter(post=obj).count()
+        return PostLike.objects.filter(post=obj).count() 
+
     
     def get_ratings_reviews(self, obj):
         # Count the number of distinct users who have rated the current post
@@ -118,23 +119,28 @@ class GuestsSerializers(serializers.ModelSerializer):
     
     def create(self, validated_data):
         user = self.context.get('user')
-        post_id = self.context.get('post')  # This is the post ID passed in the context
+        post_id = self.context.get('post')
 
-        # Fetch the ReservationContents instance using the post_id
-        post = ReservationContents.objects.get(id=post_id)  # Make sure the post exists
+        if not post_id:
+            raise serializers.ValidationError("Post ID is required.")
+
+        try:
+            post = ReservationContents.objects.get(id=post_id)
+        except ReservationContents.DoesNotExist:
+            raise serializers.ValidationError("Invalid post ID provided.")
 
         check_in = validated_data.get('check_in')
         check_out = validated_data.get('check_out')
         guests = validated_data.get('guests')
 
-        # Create the PostRating instance with the correct post object
-        post_rating = ReservationDetails.objects.create(
+        reservation_details = ReservationDetails.objects.create(
             user=user,
-            post=post,  # Pass the actual ReservationContents instance, not just the ID
+            post=post,
             check_in=check_in,
             check_out=check_out,
             guests=guests
         )
-        return post_rating
+        return reservation_details  # ✅ Ensure valid post before creating reservation
+
 
 

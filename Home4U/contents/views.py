@@ -1,24 +1,24 @@
 
-from .models import ReservationContents, PostRating, ReservationDetails
+from .models import ReservationContents, PostRating, ReservationDetails, PostLike
 from rest_framework import status, generics
 from rest_framework.response import Response
-from rest_framework import viewsets
+from rest_framework import filters
 from rest_framework.views import APIView
-from rest_framework.viewsets import ModelViewSet
 from .serializers import (ReservationContentsSerializer, GuestsSerializers, 
                           ReservationDetailSerializer,
                           PostLikeSerializer
                           )
 from .paginations import Limits
-from rest_framework import filters
 from django_filters.rest_framework import DjangoFilterBackend
 from .filters import ReservationFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound
-from .models import PostRating, ReservationContents, PostLike
-from rest_framework.permissions import IsAuthenticated
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Value, FloatField, Func
 
+
+class Round(Func):
+    function = 'ROUND'
+    template = "%(function)s(%(expressions)s, 1)"
 
 class HomeViews(generics.ListAPIView):
     serializer_class = ReservationContentsSerializer
@@ -29,26 +29,32 @@ class HomeViews(generics.ListAPIView):
     search_fields = ['house', 'state']
 
     def get_queryset(self):
-        queryset = ReservationContents.objects.all().annotate(
-            average_rating=Avg('ratings__ratings')*1
+        queryset = ReservationContents.objects.annotate(
+            average_rating=Round(Avg('ratings__ratings')),  # ✅ Force rounding at DB level
+            total_raters=Count('ratings__user', distinct=True),
+            total_likes=Count('post_likes')
         )
-        query_params = self.request.query_params
 
-        if query_params.get('homepage') == 'home':
+        global_avg = PostRating.objects.aggregate(global_avg=Avg('ratings'))['global_avg']
+        self.global_avg_rating = round(global_avg, 1) if global_avg else 0  # ✅ Round Python-level
+
+        query_params = self.request.query_params
+        homepage_filter = query_params.get('homepage')
+
+        if homepage_filter == 'home':
             reservation_id = query_params.get('id')
             if reservation_id and reservation_id.isdigit():
                 return queryset.filter(id=int(reservation_id))
             return queryset.order_by("created")
 
-        elif query_params.get('homepage') == 'newly added':
+        elif homepage_filter == 'newly added':
             return queryset.order_by("-created")
 
-        elif query_params.get('homepage') == 'ratings':
+        elif homepage_filter == 'ratings':
             post_ids = PostRating.objects.filter(ratings__gte=3).values_list('post_id', flat=True)
             return queryset.filter(id__in=post_ids)
 
-        return ReservationContents.objects.none()  # ✅ Corrected this line
-  # Fixed syntax
+        return queryset.none()
 
 
     def list(self, request, *args, **kwargs):
@@ -65,6 +71,37 @@ class HomeViews(generics.ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+
+class ReservationRatingView(APIView):
+    def post(self, request, post_pk, *args, **kwargs):
+        rating = request.data.get("ratings")
+        user = request.user
+
+        if not user:
+            return Response({"error": "User cannot be None"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            apartment = ReservationContents.objects.get(pk=post_pk)
+
+            # Ensure user has booked the apartment
+            # if not ReservationDetails.objects.filter(user=user, post=apartment).exists():
+            #     return Response({"error": "You haven't booked this house"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create rating if user has booked the apartment
+            apartment_rating = PostRating.objects.create(post=apartment, user=user, ratings=rating)
+            serialized_apartment = ReservationContentsSerializer(apartment).data
+            return Response({
+                "detail": serialized_apartment,
+                "message": "Successfully rated"
+            }, status=status.HTTP_200_OK)
+
+        except ReservationContents.DoesNotExist:
+            return Response({"error": "ReservationContents with such ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as err:
+            import traceback
+            return Response({"error": str(err), "detailed_error": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -91,11 +128,6 @@ class CreateGuests(generics.CreateAPIView):
         }
 
 
-# Customer Reservation Details View
-
-
-
-
 
 class LikePostView(APIView):
     permission_classes = [IsAuthenticated]
@@ -107,11 +139,16 @@ class LikePostView(APIView):
             return Response({'error': 'Reservation not found'}, status=status.HTTP_404_NOT_FOUND)
 
         user = request.user
-        if PostLike.objects.filter(post=reservation, user=user).exists():
-            return Response({'message': 'Reservation already liked'}, status=status.HTTP_200_OK)
+        like, created = PostLike.objects.get_or_create(post=reservation, user=user)
 
-        PostLike.objects.create(post=reservation, user=user)
-        return Response({'message': 'Reservation liked'}, status=status.HTTP_201_CREATED)
+        total_likes = PostLike.objects.filter(post=reservation).count()  # ✅ Get updated like count
+
+        if not created:
+            return Response({'message': 'Reservation already liked', 'likes_count': total_likes}, status=status.HTTP_200_OK)
+
+        return Response({'message': 'Reservation liked', 'likes_count': total_likes}, status=status.HTTP_201_CREATED)
+
+
 
 class UnlikePostView(APIView):
     permission_classes = [IsAuthenticated]
@@ -123,12 +160,17 @@ class UnlikePostView(APIView):
             return Response({'error': 'Reservation not found'}, status=status.HTTP_404_NOT_FOUND)
 
         user = request.user
-        try:
-            like = PostLike.objects.get(post=reservation, user=user)
-            like.delete()
-            return Response({'message': 'Reservation unliked'}, status=status.HTTP_200_OK)
-        except PostLike.DoesNotExist:
+
+        like = PostLike.objects.filter(post=reservation, user=user).first()
+        if not like:
             return Response({'message': 'Reservation not liked yet'}, status=status.HTTP_400_BAD_REQUEST)
+
+        like.delete()
+        
+        total_likes = PostLike.objects.filter(post=reservation).count()  # ✅ Get updated like count
+        
+        return Response({'message': 'Reservation unliked', 'likes_count': total_likes}, status=status.HTTP_200_OK)
+
 
 class UserLikedPostsView(generics.ListAPIView):
     serializer_class = PostLikeSerializer
@@ -146,46 +188,6 @@ class NewHousingContentsViewList(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
 new_post = NewHousingContentsViewList.as_view()
-
-
-        
-        
-class ReservationRatingView(APIView):
-    
-    def post(self, request, post_pk, *args, **kwargs):
-        rating = request.data["ratings"]
-        user = request.user
- 
-        if request.user is None:
-            return Response({"error": "User can not be None"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        
-        # WRITE TO MAKE SURE ONLY IF YOU HAVE USED A BOOKED APARTMENT YOU WILL BE BALLE TO MAKE RATINGS
-
-        try:
-            apartment = ReservationContents.objects.get(pk=post_pk)
-            # if ReservationDetails.objects.filter(user=request.user, post=apartment).exists():
-            apartment_rating = PostRating.objects.create(
-                    post=apartment,
-                    user=request.user,
-                    ratings=rating
-                )
-            apartment_rating.save()
-            serialized_apartment = ReservationContentsSerializer(apartment).data
-            return Response({
-                    "detail": serialized_apartment,
-                    "message": "Successfully"
-                }, status=status.HTTP_200_OK)
-            # else:
-            #     return Response({"message": "You havent booked this house"})
-        except ReservationContents.DoesNotExist:
-            return Response({"error": "ReservationContents with such id does not exist"}, status=status.HTTP_404_NOT_FOUND)
-
-        except Exception as err:
-            import traceback
-            return Response({"error": str(err),
-                             "detailed_error": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
 
