@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 import dj_database_url
 import requests
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 
 
 OTP_LIMIT_TRY = 3
