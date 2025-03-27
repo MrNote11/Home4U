@@ -36,11 +36,11 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 ALLOWED_HOSTS = ['*', "2906-105-112-203-225.ngrok-free.app", "127.0.0.1",
                  "https://home4u-3.onrender.com"]
 
-load_dotenv()
+# load_dotenv()
 
 
-FLW_SECRET_KEY = os.getenv("FLW_SECRET_KEY")
-FLW_PUBLIC_KEY = os.getenv("FLW_PUBLIC_KEY")
+FLW_SECRET_KEY = 'FLWSECK_TEST-a0b16596e92027f1c7118a963915673b-X'
+FLW_PUBLIC_KEY = 'FLWPUBK_TEST-ff111af8ee22a7d400c79c13e520160d-X'
 FLW_API_URL = "https://api.flutterwave.com/v3"
 # Application definition
 INSTALLED_APPS = [
@@ -82,7 +82,7 @@ SIMPLE_JWT = {
 if not FLW_SECRET_KEY:
     raise ValueError("FLW_SECRET_KEY is missing from .env")
 
-secret_key = os.getenv("FLW_SECRET_KEY")
+secret_key = os.environ.get("FLW_SECRET_KEY", "FLWSECK_TEST-a0b16596e92027f1c7118a963915673b-X")
 if not secret_key:
     raise ValueError("Error loading the FLW_SECRET_KEY from .env file")
     
@@ -158,7 +158,7 @@ WSGI_APPLICATION = 'Home4U.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-if  DEBUG:
+if DEBUG:
     DATABASES ={
             "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
         }
