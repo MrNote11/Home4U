@@ -30,7 +30,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY','django-insecure-)^4y*&7o&-evc(k62#*3gr4lzz0@89#fnew7u=)wjhii5m-x^!')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "True") == "True"
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 
 ALLOWED_HOSTS = ['*', "2906-105-112-203-225.ngrok-free.app", "127.0.0.1",
@@ -158,7 +158,7 @@ WSGI_APPLICATION = 'Home4U.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-if not DEBUG:
+if DEBUG:
     DATABASES ={
             "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
         }
