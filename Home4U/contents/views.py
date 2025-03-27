@@ -14,6 +14,11 @@ from .filters import ReservationFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound
 from django.db.models import Avg, Count, Value, FloatField, Func
+from django.shortcuts import get_object_or_404
+import uuid
+from payments.models import Payment
+from django.conf import settings
+import requests
 
 
 class Round(Func):
@@ -102,31 +107,87 @@ class ReservationRatingView(APIView):
         except Exception as err:
             import traceback
             return Response({"error": str(err), "detailed_error": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+        
+        
 
 
 class CreateGuests(generics.CreateAPIView):
     queryset = ReservationDetails.objects.all()
     serializer_class = GuestsSerializers
     permission_classes = [IsAuthenticated]
-    lookup_field = 'pk'
-    
+
     def get_queryset(self):
-        # Assuming you are passing `post_id` in the URL and want to filter by post_id
-        post_id = self.kwargs['post_pk']
-        return PostRating.objects.filter(post_id=post_id)
+        post_id = self.kwargs.get('post_pk')
+        return ReservationDetails.objects.filter(post_id=post_id)
 
     def get_serializer_context(self):
-        # Retrieve the current user and post from the request and URL
         user = self.request.user
-        post_id = self.kwargs['post_pk']  # Retrieve the post_id from the URL
-        
-        # Return the context with both user and post
-        return {
-            'user': user,
-            'post': post_id  # Post will be used in the serializer to create a PostRating instance
-        }
+        post_id = self.kwargs.get('post_pk')
+        return {'user': user, 'post': int(post_id) if post_id else None}
 
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            reservation = serializer.save()
+            user = self.request.user
+            total_amount = reservation.calculate_total_price()
+
+            if total_amount <= 0:
+                return Response({"error": "Invalid total price"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Store total_amount in session
+            request.session['total_amount'] = float(total_amount)
+
+            email = user.email
+            reference = str(uuid.uuid4())
+            flutterwave_url = f"{settings.FLW_API_URL}/payments"
+            secret_key = settings.FLW_SECRET_KEY
+            vercel_url = getattr(settings, "VERCEL_APP_URL", None)
+
+            payload = {
+                "tx_ref": reference,
+                "amount": float(total_amount),
+                "currency": "NGN",
+                "redirect_url": f"{vercel_url}/payments/callback/",
+                "payment_type": "card",
+                "customer": {"email": email},
+            }
+
+            headers = {
+                "Authorization": f"Bearer {secret_key}",
+                "Content-Type": "application/json",
+            }
+
+            try:
+                payment = Payment.objects.create(
+                    user=user,
+                    reservation=reservation,
+                    total_amount=total_amount,
+                    reference=reference,
+                    status="pending",
+                )
+                response = requests.post(flutterwave_url, json=payload, headers=headers)
+                response_data = response.json()
+
+                if response.status_code == 200 and response_data.get("status") == "success":
+                    return Response(
+                        {
+                            "message": "Reservation and Payment initiated successfully.",
+                            "reservation_details": serializer.data,
+                            "payment_link": response_data["data"]["link"],
+                            "reference": reference,
+                        },
+                        status=status.HTTP_201_CREATED,
+                    )
+
+                return Response({"error": "Failed to initiate payment"}, status=status.HTTP_400_BAD_REQUEST)
+
+            except requests.exceptions.RequestException:
+                return Response({"error": "Payment initiation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except Exception as e:
+                return Response({"error": f"Database or unexpected error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LikePostView(APIView):
@@ -190,35 +251,76 @@ class NewHousingContentsViewList(generics.ListAPIView):
 new_post = NewHousingContentsViewList.as_view()
 
 
-
 class CustomerDetailsViews(generics.CreateAPIView):
     serializer_class = ReservationDetailSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request, post_id):
-        try:
-            # Fetch the post (reservation) by ID
-            post = ReservationContents.objects.get(pk=post_id)
-        except ReservationContents.DoesNotExist:
-            raise NotFound(detail="Reservation not found.")
+        post = get_object_or_404(ReservationContents, pk=post_id)
+        user = request.user
 
-        # Add the post and user to the serializer context
         serializer = ReservationDetailSerializer(
             data=request.data,
-            context={'post': post, 'user': self.request.user}  # Ensure correct user is passed
+            context={'post': post, 'user': user}
         )
 
         if serializer.is_valid():
-            post_rating = serializer.save()  # Save the ReservationDetails instance
-            
-            # Return a response with the serializer data and a success message
-            return Response({
-                'message': 'Reservation created successfully!',
-                'customer_id': post_rating.id,
-                'reservation_details': serializer.data
-            }, status=201)  # HTTP 201 Created response
+            reservation = serializer.save()
 
-        return Response(serializer.errors, status=400)  # If the data is invalid, return the errors
+            # Retrieve total_amount from session
+            total_amount = request.session.get('total_amount')
 
+            if total_amount is None:
+                return Response({'error': 'Total amount not found in session'}, status=400)
 
+            email = user.email
+            reference = str(uuid.uuid4())
+            flutterwave_url = f"{settings.FLW_API_URL}/payments"
+            secret_key = settings.FLW_SECRET_KEY
+            vercel_url = getattr(settings, "VERCEL_APP_URL", None)
 
+            payload = {
+                "tx_ref": reference,
+                "amount": float(total_amount),
+                "currency": "NGN",
+                "redirect_url": f"{vercel_url}/payments/callback/",
+                "payment_type": "card",
+                "customer": {"email": email},
+            }
+
+            headers = {
+                "Authorization": f"Bearer {secret_key}",
+                "Content-Type": "application/json",
+            }
+
+            try:
+                payment = Payment.objects.create(
+                    user=user,
+                    reservation=reservation,
+                    total_amount=total_amount,
+                    reference=reference,
+                    status="pending",
+                )
+                response = requests.post(flutterwave_url, json=payload, headers=headers)
+                response_data = response.json()
+
+                if response.status_code == 200 and response_data.get("status") == "success":
+                    return Response(
+                        {
+                            "message": "Reservation created and payment initiated successfully!",
+                            "customer_id": reservation.id,
+                            "reservation_details": serializer.data,
+                            "payment_link": response_data["data"]["link"],
+                            "reference": reference,
+                        },
+                        status=201,
+                    )
+
+                return Response({"error": "Failed to initiate payment"}, status=status.HTTP_400_BAD_REQUEST)
+
+            except requests.exceptions.RequestException:
+                return Response({"error": "Payment initiation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except Exception as e:
+                return Response({"error": f"Database or unexpected error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response(serializer.errors, status=400)

@@ -6,43 +6,87 @@ from django.utils import timezone
 import re
 from django.db.models import Sum, Count
 from django.contrib.auth import get_user_model
+from dateutil.relativedelta import relativedelta  # ✅ Import for month difference
+
 
 class ReservationImagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReservationImages
         fields = ['image_url']
 
+
+
 class ReservationDetailSerializer(serializers.ModelSerializer):
+    """Handles reservation details and ensures user validation"""
+    customer_first_name = serializers.CharField(write_only=True)  # Accept user input
+    customer_last_name = serializers.CharField(write_only=True)
+    customer_email = serializers.EmailField(write_only=True)
+    customer_phone_number = serializers.CharField(write_only=True)
+
     class Meta:
         model = ReservationDetails
-        fields = ('first_name', 'last_name', 'phone_number', 'email')
-        
-    def validate_phone_number(self, value):
-        """Validate phone number format"""
-        phone_pattern = r'^\+?1?\d{9,15}$'  # Validates phone numbers like +123456789 or 123456789
-        if not re.match(phone_pattern, value):
-            raise serializers.ValidationError("Invalid phone number format.")
-        return value
+        fields = (
+            'first_name', 'last_name', 'phone_number', 'email','check_in', 'check_out',
+            'customer_first_name', 'customer_last_name', 'customer_email', 'customer_phone_number'
+        )
+
+    def get_customer_first_name(self, obj):
+        return self.context['user'].first_name if self.context.get('user') else None
+
+    def get_customer_last_name(self, obj):
+        return self.context['user'].last_name if self.context.get('user') else None
+
+    def get_customer_email(self, obj):
+        return self.context['user'].email if self.context.get('user') else None
+
+    def get_customer_phone_number(self, obj):
+        """Get the logged-in user's phone number if available"""
+        user = self.context.get('user')
+        return getattr(user, 'profile', {}).get('phone_number', None) or getattr(user, 'phone_number', None) if user else None
+
+    def validate(self, data):
+        """Ensure the provided customer details match the logged-in user"""
+        user = self.context.get('user')
+
+        if not user:
+            raise serializers.ValidationError("User is not authenticated.")
+
+        errors = {}
+
+        if data.get("customer_first_name") and data["customer_first_name"] != user.first_name:
+            errors["customer_first_name"] = "Does not match the logged-in user."
+
+        if data.get("customer_last_name") and data["customer_last_name"] != user.last_name:
+            errors["customer_last_name"] = "Does not match the logged-in user."
+
+        if data.get("customer_email") and data["customer_email"] != user.email:
+            errors["customer_email"] = "Does not match the logged-in user."
+
+        # user_phone = getattr(user, "profile", {}).get("phone_number", None) or getattr(user, "phone_number", None)
+        # if data.get("customer_phone_number") and data["customer_phone_number"] != user_phone:
+        #     errors["customer_phone_number"] = "Does not match the logged-in user."
+
+        if errors:
+            raise serializers.ValidationError(errors)  # 🚨 Stop processing if incorrect
+
+        return data
+
 
     def create(self, validated_data):
-        user = self.context.get('user')  # Get the current authenticated user
-        post = self.context.get('post')  # Get the post from the context
-        
+        """Creates a reservation entry"""
+        user = self.context.get('user')
+        post = self.context.get('post')
+
         if not post:
-            raise serializers.ValidationError("Post not provided.")
+            raise serializers.ValidationError("Post is required.")
         
-        # Create the ReservationDetails instance (reservation details)
-        post_rating = ReservationDetails.objects.create(
-            user=user,
-            post=post,
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name'],
-            phone_number=validated_data['phone_number'],
-            email=validated_data['email']
-        )
-        return post_rating  # Return the created ReservationDetails instance
+        validated_data.pop('customer_first_name', None)
+        validated_data.pop('customer_last_name', None)
+        validated_data.pop('customer_email', None)
+        validated_data.pop('customer_phone_number', None)
 
-
+        # Create the reservation
+        return ReservationDetails.objects.create(user=user, post=post, **validated_data)
 
 class ReservationContentsSerializer(serializers.ModelSerializer):
     likes_count = serializers.SerializerMethodField()
@@ -88,36 +132,42 @@ class PostLikeSerializer(serializers.ModelSerializer):
 
    
 
+
+
 class GuestsSerializers(serializers.ModelSerializer):
+    total_price = serializers.SerializerMethodField()
+
     class Meta:
         model = ReservationDetails
-        fields = ['check_in', 'check_out', 'guests']
+        fields = ['check_in', 'check_out', 'guests', 'total_price']
 
     def validate_check_in(self, value):
+        """Ensure check-in is not in the past."""
         if value < timezone.now().date():
             raise serializers.ValidationError("Check-in date cannot be in the past.")
         return value
 
     def validate_check_out(self, value):
-        if value < timezone.now().date():
-            raise serializers.ValidationError("Check-out date cannot be in the past.")
+        """Ensure check-out is after check-in."""
+        if value <= timezone.now().date():
+            raise serializers.ValidationError("Check-out date must be in the future.")
         return value
-    
 
     def validate(self, attrs):
+        """Ensure check-out is after check-in."""
         check_in = attrs.get('check_in')
         check_out = attrs.get('check_out')
 
-        if check_in and check_out:
-            if check_out <= check_in:
-                raise serializers.ValidationError("Check-out must be after check-in.")
-        
-        if check_in == check_out:
-            raise serializers.ValidationError("Check-in and check-out cannot be the same.")
-        
+        if check_out and check_in and check_out <= check_in:
+            raise serializers.ValidationError("Check-out must be after check-in.")
         return attrs
-    
+
+    def get_total_price(self, obj):
+        """Retrieve the calculated total price."""
+        return obj.calculate_total_price()
+
     def create(self, validated_data):
+        """Create a reservation with the correct post ID."""
         user = self.context.get('user')
         post_id = self.context.get('post')
 
@@ -129,18 +179,4 @@ class GuestsSerializers(serializers.ModelSerializer):
         except ReservationContents.DoesNotExist:
             raise serializers.ValidationError("Invalid post ID provided.")
 
-        check_in = validated_data.get('check_in')
-        check_out = validated_data.get('check_out')
-        guests = validated_data.get('guests')
-
-        reservation_details = ReservationDetails.objects.create(
-            user=user,
-            post=post,
-            check_in=check_in,
-            check_out=check_out,
-            guests=guests
-        )
-        return reservation_details  # ✅ Ensure valid post before creating reservation
-
-
-
+        return ReservationDetails.objects.create(user=user, post=post, **validated_data)

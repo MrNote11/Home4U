@@ -13,6 +13,9 @@ from datetime import timedelta
 import os
 from pathlib import Path
 import dj_database_url
+import requests
+from dotenv import load_dotenv
+
 
 OTP_LIMIT_TRY = 3
 
@@ -27,14 +30,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY','django-insecure-)^4y*&7o&-evc(k62#*3gr4lzz0@89#fnew7u=)wjhii5m-x^!')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True')=='True'
+DEBUG = os.getenv("DEBUG", "False") == "True"
+
 
 ALLOWED_HOSTS = ['*', "2906-105-112-203-225.ngrok-free.app", "127.0.0.1",
                  "https://home4u-3.onrender.com"]
 
+load_dotenv()
 
+
+FLW_SECRET_KEY = os.getenv("FLW_SECRET_KEY")
+FLW_PUBLIC_KEY = os.getenv("FLW_PUBLIC_KEY")
+FLW_API_URL = "https://api.flutterwave.com/v3"
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -43,13 +51,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'accounts',
+    'payments',
     'contents',
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'rest_framework',
     'whitenoise.runserver_nostatic'
-    
 ]
 
 REST_FRAMEWORK = {
@@ -65,13 +73,19 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=100),
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=150),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=150),  # Fix
     'REFRESH_TOKEN_LIFETIME': timedelta(days=4),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
+if not FLW_SECRET_KEY:
+    raise ValueError("FLW_SECRET_KEY is missing from .env")
+
+secret_key = os.getenv("FLW_SECRET_KEY")
+if not secret_key:
+    raise ValueError("Error loading the FLW_SECRET_KEY from .env file")
+    
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'  # Or your SMTP server
 EMAIL_PORT = 587
@@ -105,13 +119,7 @@ CORS_ALLOWED_ORIGINS = [
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
-# CORS_ALLOW_METHODS = [
-#     "GET",
-#     "POST",
-#     "PUT",
-#     "PATCH",
-#     "DELETE",
-# ]
+
 
 CORS_ALLOW_HEADERS = [
     "content-type",
@@ -150,7 +158,7 @@ WSGI_APPLICATION = 'Home4U.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-if DEBUG:
+if  DEBUG:
     DATABASES ={
             "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
         }
@@ -208,19 +216,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Collects static files for
 MEDIA_URL = '/media/'  # URL prefix for media files
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Directory to store uploaded files
 
-
-# MEDIA_URL = '/media/'
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
-# STATIC_URL = '/static/'
-# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-# STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Development static folder
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

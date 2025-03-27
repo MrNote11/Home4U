@@ -5,20 +5,32 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import  UserProfile
 from django.contrib.auth import authenticate
+import re
+from django.contrib.auth.models import User
 
-User = get_user_model()
 
-class UserSerializers(serializers.Serializer):
-    email = serializers.EmailField()
-    username = serializers.CharField()
+class UserSerializers(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
+    number = serializers.CharField()
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'username', 'password', 'confirm_password']
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("Email already exists.")
         return value
-
+    
+    
+    def validate_number(self, value):
+        """Validate phone number format"""
+        phone_pattern = r'^\+?1?\d{9,15}$'  # Validates phone numbers like +123456789 or 123456789
+        if not re.match(phone_pattern, value):
+            raise serializers.ValidationError("Invalid phone number format.")
+        return value
+    
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Username already exists.")
@@ -30,13 +42,10 @@ class UserSerializers(serializers.Serializer):
         return data
 
     def create(self, validated_data):
-        validated_data.pop('confirm_password', None)
-        user = User.objects.create_user(
-            email=validated_data['email'],
-            username=validated_data['username'],
-            password=validated_data['password']
-        )
-        return user
+        validated_data.pop('confirm_password', None)  # Remove confirm_password before saving
+        user = User.objects.create_user(**validated_data)  # Automatically hashes the password
+        return user  # ✅ Return user correctly
+
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()

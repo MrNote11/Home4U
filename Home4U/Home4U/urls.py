@@ -29,6 +29,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('reservation/', include('contents.urls')),
     path('', include('accounts.urls')),
+    path('payments/', include('payments.urls')),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh')
 ]

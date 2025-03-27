@@ -23,10 +23,10 @@ from django.utils import timezone
 from django.shortcuts import redirect
 from django.utils.encoding import force_bytes
 import uuid
+from django.contrib.auth import get_user_model
 
 
-
-from datetime import timedelta
+User = get_user_model()
 
 class UserRegister(APIView):
     def post(self, request):
@@ -79,11 +79,8 @@ class UserRegister(APIView):
                     [user.email],
                     fail_silently=False
                 )
-                return Response({"message": "Verification link sent. Click within 10 minutes.", "data": serializer.data}, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
+                return Response({"message": "Registration Successful. Please verify your email."}, status=status.HTTP_201_CREATED)
+            
 signup = UserRegister.as_view()
 
 
