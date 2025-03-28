@@ -162,7 +162,7 @@ WSGI_APPLICATION = 'Home4U.wsgi.application'
 
 
 # DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u").decode("utf-8") if isinstance(os.getenv("DATABASE_URL", "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u"), bytes) else os.getenv("DATABASE_URL", "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u")
-ENVIRONMENT_VARIABLE = False
+ENVIRONMENT_VARIABLE = True
 POSTGRESS = True
 
 database_url = os.environ.get('DATABASE_URL')
@@ -174,7 +174,7 @@ if not database_url:
     raise ValueError("DATABASE_URL is not set. Please check your environment variables.")
 
 
-if ENVIRONMENT_VARIABLE or POSTGRESS == True:
+if ENVIRONMENT_VARIABLE and POSTGRESS == True:
      DATABASES ={
         "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
                 }
@@ -243,7 +243,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Directory to store uploaded file
 
 
 
-if POSTGRESS or ENVIRONMENT_VARIABLE == True:
+if POSTGRESS and ENVIRONMENT_VARIABLE == True:
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
     
 else:
