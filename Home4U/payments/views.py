@@ -132,11 +132,15 @@ class PaymentCallback(APIView):
         print(f"1:{tx_ref}")
         # Construct the verification URL
         url = f"https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref={tx_ref}"
+        
         print(f"2:{tx_ref}")
+        
         headers = {
             "Authorization": f"Bearer {settings.FLW_SECRET_KEY}",
+            
             "Content-Type": "application/json"
         }
+        
         print(f"FLK{settings.FLW_SECRET_KEY}")
 
         # Make request to Flutterwave

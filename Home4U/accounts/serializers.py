@@ -12,7 +12,7 @@ from django.contrib.auth.models import User
 class UserSerializers(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
-    number = serializers.CharField()
+    # number = serializers.CharField()
 
     class Meta:
         model = User
