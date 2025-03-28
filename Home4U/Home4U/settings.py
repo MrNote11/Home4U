@@ -13,7 +13,12 @@ from datetime import timedelta
 import os
 from pathlib import Path
 import dj_database_url
-import requests
+import os
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+from dotenv import load_dotenv
+load_dotenv()
 #from dotenv import load_dotenv
 
 
@@ -49,6 +54,8 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'cloudinary',
+    'cloudinary_storage',
     'django.contrib.staticfiles',
     'accounts',
     'payments',
@@ -78,6 +85,8 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
 }
+
+
 
 if not FLW_SECRET_KEY:
     raise ValueError("FLW_SECRET_KEY is missing from .env")
@@ -153,16 +162,23 @@ WSGI_APPLICATION = 'Home4U.wsgi.application'
 
 
 # DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u").decode("utf-8") if isinstance(os.getenv("DATABASE_URL", "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u"), bytes) else os.getenv("DATABASE_URL", "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u")
+ENVIRONMENT_VARIABLE = False
+POSTGRESS = True
+
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    database_url = database_url.strip()  # Remove extra spaces/newlines
+    database_url = database_url.decode("utf-8") if isinstance(database_url, bytes) else database_url
+
+if not database_url:
+    raise ValueError("DATABASE_URL is not set. Please check your environment variables.")
 
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
-if DEBUG:
-    DATABASES ={
-            "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
-        }
-else:   
+if ENVIRONMENT_VARIABLE or POSTGRESS == True:
+     DATABASES ={
+        "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
+                }
+else:
     DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -173,9 +189,17 @@ else:
                 'PORT': '5432'
             }
         }
+# Database
+# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES['default'] = dj_database_url.parse("postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u")
-# "postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u"
+# if not DEBUG:
+
+    
+
+
+
+# DATABASES['default'] = dj_database_url.parse("postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u")
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -215,6 +239,33 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Collects static files for
 # Media Files Configuration (For Uploaded Images)
 MEDIA_URL = '/media/'  # URL prefix for media files
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Directory to store uploaded files
+
+
+
+
+if POSTGRESS or ENVIRONMENT_VARIABLE == True:
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    
+else:
+    MEDIA_URL = '/media/'
+
+
+
+# CLOUD_API_NAME = os.environ.get('dtmw6jgue')
+# CLOUD_API_KEY = os.environ.get('887834964485546')
+# CLOUD_API_SECRET = os.environ.get('h1vYbJJa-s_qabXBx7vi4dCYiUc')
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv('CLOUD_API_NAME'),
+    'API_KEY': os.getenv('CLOUD_API_KEY'),
+    'API_SECRET': os.getenv('CLOUD_API_SECRET')
+}
+
+cloudinary.config(
+    cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+    api_key=CLOUDINARY_STORAGE['API_KEY'],
+    api_secret=CLOUDINARY_STORAGE['API_SECRET']
+)
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

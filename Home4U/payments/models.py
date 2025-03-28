@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth import get_user_model
 import uuid
 from contents.models import ReservationDetails
+from cloudinary.models import CloudinaryField
+
 
 User = get_user_model()
 class Payment(models.Model):

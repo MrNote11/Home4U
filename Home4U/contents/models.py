@@ -2,6 +2,9 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from dateutil.relativedelta import relativedelta
+from cloudinary.models import CloudinaryField
+from django_resized import ResizedImageField
+
 class ReservationContents(models.Model):
 
         BEDS = [
@@ -130,7 +133,7 @@ class ReservationDetails(models.Model):
         
 class ReservationImages(models.Model):
         reservation = models.ForeignKey(ReservationContents, on_delete=models.CASCADE, related_name='images')
-        image_url = models.ImageField(upload_to='reservation_images/', default='default.jpg', blank=True)
+        image_url = ResizedImageField(size=[600, 600],upload_to='reservation_images/', quality= 85,default='default.jpg', blank=True)
 
         def __str__(self):
             return f"Image {self.id} for Reservation {self.reservation.id}"
