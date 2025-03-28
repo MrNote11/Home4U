@@ -42,9 +42,9 @@ class UserSerializers(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        validated_data.pop('confirm_password', None)  # Remove confirm_password before saving
-        user = User.objects.create_user(**validated_data)  # Automatically hashes the password
-        return user  # ✅ Return user correctly
+        validated_data.pop('confirm_password', None)  
+        user = User.objects.create_user(**validated_data)  
+        return user  #
 
 
 class LoginSerializer(serializers.Serializer):

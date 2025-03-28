@@ -35,7 +35,7 @@ class HomeViews(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = ReservationContents.objects.annotate(
-            average_rating=Round(Avg('ratings__ratings')),  # ✅ Force rounding at DB level
+            average_rating=Round(Avg('ratings__ratings')),  
             total_raters=Count('ratings__user', distinct=True),
             total_likes=Count('post_likes')
         )
@@ -135,7 +135,9 @@ class CreateGuests(generics.CreateAPIView):
             if total_amount <= 0:
                 return Response({"error": "Invalid total price"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Store total_amount in session
+            # Store check_in, check_out, and total_amount in session
+            request.session['check_in'] = str(reservation.check_in)
+            request.session['check_out'] = str(reservation.check_out)
             request.session['total_amount'] = float(total_amount)
 
             email = user.email
@@ -259,19 +261,26 @@ class CustomerDetailsViews(generics.CreateAPIView):
         post = get_object_or_404(ReservationContents, pk=post_id)
         user = request.user
 
+        # Retrieve values from session
+        check_in = request.session.get('check_in')
+        check_out = request.session.get('check_out')
+        total_amount = request.session.get('total_amount')
+
+        if not check_in or not check_out or total_amount is None:
+            return Response({'error': 'Missing data in session'}, status=400)
+
+        # Add check_in and check_out to request data
+        mutable_data = request.data.copy()
+        mutable_data['check_in'] = check_in
+        mutable_data['check_out'] = check_out
+
         serializer = ReservationDetailSerializer(
-            data=request.data,
+            data=mutable_data,
             context={'post': post, 'user': user}
         )
 
         if serializer.is_valid():
             reservation = serializer.save()
-
-            # Retrieve total_amount from session
-            total_amount = request.session.get('total_amount')
-
-            if total_amount is None:
-                return Response({'error': 'Total amount not found in session'}, status=400)
 
             email = user.email
             reference = str(uuid.uuid4())
@@ -310,6 +319,7 @@ class CustomerDetailsViews(generics.CreateAPIView):
                             "message": "Reservation created and payment initiated successfully!",
                             "customer_id": reservation.id,
                             "reservation_details": serializer.data,
+                            "total":total_amount,
                             "payment_link": response_data["data"]["link"],
                             "reference": reference,
                         },

@@ -80,10 +80,10 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
         if not post:
             raise serializers.ValidationError("Post is required.")
         
-        validated_data.pop('customer_first_name', None)
-        validated_data.pop('customer_last_name', None)
-        validated_data.pop('customer_email', None)
-        validated_data.pop('customer_phone_number', None)
+        # validated_data.pop('customer_first_name', None)
+        # validated_data.pop('customer_last_name', None)
+        # validated_data.pop('customer_email', None)
+        # validated_data.pop('customer_phone_number', None)
 
         # Create the reservation
         return ReservationDetails.objects.create(user=user, post=post, **validated_data)
@@ -129,9 +129,6 @@ class PostLikeSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostLike
         fields = ['id', 'post', 'created_at']
-
-   
-
 
 
 class GuestsSerializers(serializers.ModelSerializer):
