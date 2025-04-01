@@ -319,6 +319,7 @@ class CustomerDetailsViews(generics.CreateAPIView):
                             "message": "Reservation created and payment initiated successfully!",
                             "customer_id": reservation.id,
                             "reservation_details": serializer.data,
+                            "customer_details": reservation.customer_details,
                             "total":total_amount,
                             "payment_link": response_data["data"]["link"],
                             "reference": reference,

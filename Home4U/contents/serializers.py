@@ -80,13 +80,24 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
         if not post:
             raise serializers.ValidationError("Post is required.")
         
-        # validated_data.pop('customer_first_name', None)
-        # validated_data.pop('customer_last_name', None)
-        # validated_data.pop('customer_email', None)
-        # validated_data.pop('customer_phone_number', None)
+        customer_details = {
+        "customer_first_name": validated_data.pop('customer_first_name', user.first_name),
+        "customer_last_name": validated_data.pop('customer_last_name', user.last_name),
+        "customer_email": validated_data.pop('customer_email', user.email),
+        "customer_phone_number": validated_data.pop('customer_phone_number', getattr(user, 'phone_number', None))
+        }
+        
+        reservation = ReservationDetails.objects.create(user=user, post=post, **validated_data)
+
+    # Attach customer details to the response (but not save them)
+        reservation.customer_details = customer_details  # Attach for reference
+
+        return reservation
+        
+    
 
         # Create the reservation
-        return ReservationDetails.objects.create(user=user, post=post, **validated_data)
+        # return ReservationDetails.objects.create(user=user, post=post, **validated_data)
 
 class ReservationContentsSerializer(serializers.ModelSerializer):
     likes_count = serializers.SerializerMethodField()

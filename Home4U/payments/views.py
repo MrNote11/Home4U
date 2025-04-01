@@ -153,6 +153,7 @@ class PaymentCallback(APIView):
                 {"error": "Invalid response from Flutterwave"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+           
 
         try:
             response_data = response.json()
