@@ -125,9 +125,14 @@ class ReservationDetails(models.Model):
                 print(f"Check-in: {self.check_in}, Check-out: {self.check_out}")
                 delta = relativedelta(self.check_out, self.check_in)
                 num_months = delta.years * 12 + delta.months
+                remaining_days = (self.check_out - self.check_in).days - (num_months * 30)
+        
+                # If remaining days exceed half a month, count it as a full month
+                if remaining_days > 15:
+                    num_months += 2
                 print(f"Number of months: {num_months}")
                 print(f"Post price: {self.post.price}")
-                total_price = num_months * self.post.price if num_months > 0 else self.post.price
+                total_price = num_months * self.post.price 
                 print(f"Total price: {total_price}")
                 return total_price
         
