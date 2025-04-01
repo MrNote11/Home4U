@@ -130,15 +130,15 @@ class CreateGuests(generics.CreateAPIView):
         if serializer.is_valid():
             reservation = serializer.save()
             user = self.request.user
-            total_amount = reservation.calculate_total_price()
+            total_price = reservation.calculate_total_price()
 
-            if total_amount <= 0:
+            if total_price <= 0:
                 return Response({"error": "Invalid total price"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Store check_in, check_out, and total_amount in session
+            # Store check_in, check_out, and total_price in session
             request.session['check_in'] = str(reservation.check_in)
             request.session['check_out'] = str(reservation.check_out)
-            request.session['total_amount'] = float(total_amount)
+            request.session['total_price'] = float(total_price)
 
             email = user.email
             reference = str(uuid.uuid4())
@@ -148,7 +148,7 @@ class CreateGuests(generics.CreateAPIView):
 
             payload = {
                 "tx_ref": reference,
-                "amount": float(total_amount),
+                "amount": float(total_price),
                 "currency": "NGN",
                 "redirect_url": f"{vercel_url}/payments/callback/",
                 "payment_type": "card",
@@ -164,7 +164,7 @@ class CreateGuests(generics.CreateAPIView):
                 payment = Payment.objects.create(
                     user=user,
                     reservation=reservation,
-                    total_amount=total_amount,
+                    total_amount=total_price,
                     reference=reference,
                     status="pending",
                 )
@@ -264,9 +264,9 @@ class CustomerDetailsViews(generics.CreateAPIView):
         # Retrieve values from session
         check_in = request.session.get('check_in')
         check_out = request.session.get('check_out')
-        total_amount = request.session.get('total_amount')
+        total_price = request.session.get('total_price')
 
-        if not check_in or not check_out or total_amount is None:
+        if not check_in or not check_out or total_price is None:
             return Response({'error': 'Missing data in session'}, status=400)
 
         # Add check_in and check_out to request data
@@ -290,7 +290,7 @@ class CustomerDetailsViews(generics.CreateAPIView):
 
             payload = {
                 "tx_ref": reference,
-                "amount": float(total_amount),
+                "amount": float(total_price),
                 "currency": "NGN",
                 "redirect_url": f"{vercel_url}/payments/callback/",
                 "payment_type": "card",
@@ -306,7 +306,7 @@ class CustomerDetailsViews(generics.CreateAPIView):
                 payment = Payment.objects.create(
                     user=user,
                     reservation=reservation,
-                    total_amount=total_amount,
+                    total_amount=total_price,
                     reference=reference,
                     status="pending",
                 )
@@ -320,7 +320,7 @@ class CustomerDetailsViews(generics.CreateAPIView):
                             "customer_id": reservation.id,
                             "reservation_details": serializer.data,
                             "customer_details": reservation.customer_details,
-                            "total":total_amount,
+                            "total":total_price,
                             "payment_link": response_data["data"]["link"],
                             "reference": reference,
                         },
