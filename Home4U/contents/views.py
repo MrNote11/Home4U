@@ -270,7 +270,7 @@ class CustomerDetailsViews(generics.CreateAPIView):
             return Response({'error': 'Missing data in session'}, status=400)
 
         # Add check_in and check_out to request data
-        mutable_data = request.data.copy()
+        mutable_data = request.data
         mutable_data['check_in'] = check_in
         mutable_data['check_out'] = check_out
 
