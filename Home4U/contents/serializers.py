@@ -16,91 +16,6 @@ class ReservationImagesSerializer(serializers.ModelSerializer):
 
 
 
-class ReservationDetailSerializer(serializers.ModelSerializer):
-    """Handles reservation details and ensures user validation"""
-    customer_first_name = serializers.CharField(write_only=True)  # Accept user input
-    customer_last_name = serializers.CharField(write_only=True)
-    customer_email = serializers.EmailField(write_only=True)
-    customer_phone_number = serializers.CharField(write_only=True)
-    #total_price = serializers.SerializerMethodField()
-
-
-    class Meta:
-        model = ReservationDetails
-        fields = (
-            'first_name', 'last_name', 'phone_number', 'email',
-            'customer_first_name', 'customer_last_name', 'customer_email', 'customer_phone_number'
-        )
-
-    def get_customer_first_name(self, obj):
-        return self.context['user'].first_name if self.context.get('user') else None
-
-    def get_customer_last_name(self, obj):
-        return self.context['user'].last_name if self.context.get('user') else None
-
-    def get_customer_email(self, obj):
-        return self.context['user'].email if self.context.get('user') else None
-
-    def get_customer_phone_number(self, obj):
-        """Get the logged-in user's phone number if available"""
-        user = self.context.get('user')
-        return getattr(user, 'profile', {}).get('phone_number', None) or getattr(user, 'phone_number', None) if user else None
-    
-    def get_total_price(self, obj):
-        """Retrieve the calculated total price."""
-        payment = Payment.objects.filter(reservation=obj).first()
-        return payment.total_amount if payment else None
-    
-    def validate(self, data):
-        """Ensure the provided customer details match the logged-in user"""
-        user = self.context.get('user')
-
-        if not user:
-            raise serializers.ValidationError("User is not authenticated.")
-
-        errors = {}
-
-        if data.get("customer_first_name") and data["customer_first_name"] != user.first_name:
-            errors["customer_first_name"] = "Does not match the logged-in user."
-
-        if data.get("customer_last_name") and data["customer_last_name"] != user.last_name:
-            errors["customer_last_name"] = "Does not match the logged-in user."
-
-        if data.get("customer_email") and data["customer_email"] != user.email:
-            errors["customer_email"] = "Does not match the logged-in user."
-
-        # user_phone = getattr(user, "profile", {}).get("phone_number", None) or getattr(user, "phone_number", None)
-        # if data.get("customer_phone_number") and data["customer_phone_number"] != user_phone:
-        #     errors["customer_phone_number"] = "Does not match the logged-in user."
-
-        if errors:
-            raise serializers.ValidationError(errors)  # 🚨 Stop processing if incorrect
-
-        return data
-
-
-    def create(self, validated_data):
-        """Creates a reservation entry"""
-        user = self.context.get('user')
-        post = self.context.get('post')
-
-        if not post:
-            raise serializers.ValidationError("Post is required.")
-        
-        customer_details = {
-        "customer_first_name": validated_data.pop('customer_first_name', user.first_name),
-        "customer_last_name": validated_data.pop('customer_last_name', user.last_name),
-        "customer_email": validated_data.pop('customer_email', user.email),
-        "customer_phone_number": validated_data.pop('customer_phone_number', getattr(user, 'phone_number', None))
-        }
-        
-        reservation = ReservationDetails.objects.create(user=user, post=post, **validated_data)
-
-    # Attach customer details to the response (but not save them)
-        reservation.customer_details = customer_details  # Attach for reference
-
-        return reservation
-        
     
 
         # Create the reservation
@@ -195,3 +110,91 @@ class GuestsSerializers(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid post ID provided.")
 
         return ReservationDetails.objects.create(user=user, post=post, **validated_data)
+    
+    
+class ReservationDetailSerializer(serializers.ModelSerializer):
+    """Handles reservation details and ensures user validation"""
+    customer_first_name = serializers.CharField(write_only=True)
+    customer_last_name = serializers.CharField(write_only=True)
+    customer_email = serializers.EmailField(write_only=True)
+    customer_phone_number = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = ReservationDetails
+        fields = (
+            'first_name', 'last_name', 'phone_number', 'email',
+            'customer_first_name', 'customer_last_name', 'customer_email', 'customer_phone_number'
+        )
+
+    def validate(self, data):
+        """Ensure customer details match the logged-in user"""
+        user = self.context.get('user')
+
+        if not user:
+            raise serializers.ValidationError("User is not authenticated.")
+
+        errors = {}
+
+        if data.get("customer_first_name") and data["customer_first_name"] != user.first_name:
+            errors["customer_first_name"] = "Does not match the logged-in user."
+
+        if data.get("customer_last_name") and data["customer_last_name"] != user.last_name:
+            errors["customer_last_name"] = "Does not match the logged-in user."
+
+        if data.get("customer_email") and data["customer_email"] != user.email:
+            errors["customer_email"] = "Does not match the logged-in user."
+
+        if errors:
+            raise serializers.ValidationError(errors)  # 🚨 Stop processing if incorrect
+
+        return data
+
+    def create(self, validated_data):
+        """Create a reservation linked to a valid post ID."""
+        user = self.context.get('user')
+        post_id = self.context.get('post')
+
+        if not isinstance(post_id, int):
+            raise serializers.ValidationError("Invalid post ID. Expected an integer.")
+
+        try:
+            post = ReservationContents.objects.get(id=post_id)  # ✅ Correct lookup
+        except ReservationContents.DoesNotExist:
+            raise serializers.ValidationError("Invalid post ID provided.")
+
+        customer_details = {
+            "customer_first_name": validated_data.pop('customer_first_name', user.first_name),
+            "customer_last_name": validated_data.pop('customer_last_name', user.last_name),
+            "customer_email": validated_data.pop('customer_email', user.email),
+            "customer_phone_number": validated_data.pop('customer_phone_number', getattr(user, 'phone_number', None))
+        }
+
+        reservation = ReservationDetails.objects.create(user=user, post=post, **validated_data)
+        reservation.customer_details = customer_details
+
+        return reservation
+
+    
+    
+    # def create(self, validated_data):
+    #     """Creates a reservation entry"""
+    #     user = self.context.get('user')
+    #     post = self.context.get('post')
+        
+        
+    #     if not post:
+    #         raise serializers.ValidationError("Post is required.")
+        
+    #     customer_details = {
+    #     "customer_first_name": validated_data.pop('customer_first_name', user.first_name),
+    #     "customer_last_name": validated_data.pop('customer_last_name', user.last_name),
+    #     "customer_email": validated_data.pop('customer_email', user.email),
+    #     "customer_phone_number": validated_data.pop('customer_phone_number', getattr(user, 'phone_number', None))
+    #     }
+        
+    #     reservation = ReservationDetails.objects.create(user=user, post=post, **validated_data)
+
+    #     reservation.customer_details = customer_details  # Attach for reference
+
+    #     return reservation
+            

@@ -135,8 +135,11 @@ class CreateGuests(generics.CreateAPIView):
             if total_price <= 0:
                 return Response({"error": "Invalid total price"}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Store check_in, check_out, and total_price in session
+            request.session['check_in'] = str(reservation.check_in)
+            request.session['check_out'] = str(reservation.check_out)
+            request.session['total_price'] = float(total_price)
 
-            
             email = user.email
             reference = str(uuid.uuid4())
             flutterwave_url = f"{settings.FLW_API_URL}/payments"
@@ -151,17 +154,6 @@ class CreateGuests(generics.CreateAPIView):
                 "payment_type": "card",
                 "customer": {"email": email},
             }
-            
-            
-            request.session['payment_payload'] = {
-                "tx_ref": reference,
-                "amount": float(total_price),
-                "currency": "NGN",
-                "redirect_url": f"{vercel_url}/payments/callback/",
-                "payment_type": "card",
-                "customer": {"email": email},
-            }
-            request.session.save()  # ✅ Ensure session data is saved
 
             headers = {
                 "Authorization": f"Bearer {secret_key}",
@@ -261,42 +253,51 @@ class NewHousingContentsViewList(generics.ListAPIView):
 new_post = NewHousingContentsViewList.as_view()
 
 
+
 class CustomerDetailsViews(generics.CreateAPIView):
     serializer_class = ReservationDetailSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request, post_id):
+        """Handles customer reservation and payment initiation"""
+
+        # ✅ Ensure ReservationContents exists
         post = get_object_or_404(ReservationContents, pk=post_id)
+
         user = request.user
 
-        # Retrieve values from session
+        reservations = ReservationDetails.objects.filter(user=user, post=post)
+        if not reservations.exists():
+            return Response({"error": "No reservation found for this post."}, status=400)
 
+        # Example: Get total price from all reservations
+        total_amount = sum(reservation.calculate_total_price() for reservation in reservations)
 
-        # if not check_in or not check_out or total_price is None:
-        #     return Response({'error': 'Missing data in session',
-        #                      'check_in':check_in,
-        #                      'check_out':check_out,
-        #                      'total_price':total_price}, status=400)
-
+        # # ✅ Call calculate_total_price() from ReservationDetails
+        # total_amount = reservation.calculate_total_price()
 
         serializer = ReservationDetailSerializer(
             data=request.data,
-            context={'post': post, 'user': user}
+            context={'post': post.id, 'user': user}
         )
 
         if serializer.is_valid():
-            reservation = serializer.save()
+            new_reservation = serializer.save()
 
             email = user.email
-            reference = str(uuid.uuid4())
+            reference = str(uuid.uuid4())  # ✅ Unique transaction reference
             flutterwave_url = f"{settings.FLW_API_URL}/payments"
             secret_key = settings.FLW_SECRET_KEY
             vercel_url = getattr(settings, "VERCEL_APP_URL", None)
 
-            payment_payload = request.session.get('payment_payload')
-            if not payment_payload:
-                return Response({"error": "Payment payload missing in session."}, status=400)
-
+            payload = {
+                "tx_ref": reference,
+                "amount": float(total_amount),
+                "currency": "NGN",
+                "redirect_url": f"{vercel_url}/payments/callback/",
+                "payment_type": "card",
+                "customer": {"email": email},
+            }
 
             headers = {
                 "Authorization": f"Bearer {secret_key}",
@@ -304,18 +305,17 @@ class CustomerDetailsViews(generics.CreateAPIView):
             }
 
             try:
-                response = requests.post(flutterwave_url, json=payment_payload, headers=headers)
+                response = requests.post(flutterwave_url, json=payload, headers=headers)
                 response_data = response.json()
 
                 if response.status_code == 200 and response_data.get("status") == "success":
                     return Response(
                         {
                             "message": "Reservation created and payment initiated successfully!",
-                            "customer_id": reservation.id,
+                            "customer_id": new_reservation.id,
                             "reservation_details": serializer.data,
-                            "customer_details": reservation.customer_details,
-                            #"total_price":total_price,
-                            "payment_link": response_data["data"]["link"],
+                            "payment_link":response_data["data"]["link"],
+                            "customer_details": new_reservation.customer_details,
                             "reference": reference,
                         },
                         status=201,
@@ -326,6 +326,6 @@ class CustomerDetailsViews(generics.CreateAPIView):
             except requests.exceptions.RequestException:
                 return Response({"error": "Payment initiation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             except Exception as e:
-                return Response({"error": f"Database or unexpected error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"error": f"Unexpected error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(serializer.errors, status=400)
