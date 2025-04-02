@@ -271,7 +271,8 @@ class CustomerDetailsViews(generics.CreateAPIView):
             return Response({"error": "No reservation found for this post."}, status=400)
 
         # Example: Get total price from all reservations
-        total_amount = sum(reservation.calculate_total_price() for reservation in reservations)
+        for reservation in reservations:
+             total_amount = reservation.calculate_total_price()
 
         # # ✅ Call calculate_total_price() from ReservationDetails
         # total_amount = reservation.calculate_total_price()
