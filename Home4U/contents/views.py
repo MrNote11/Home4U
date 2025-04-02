@@ -267,7 +267,10 @@ class CustomerDetailsViews(generics.CreateAPIView):
         total_price = request.session.get('total_price')
 
         if not check_in or not check_out or total_price is None:
-            return Response({'error': 'Missing data in session'}, status=400)
+            return Response({'error': 'Missing data in session',
+                             'check_in':check_in,
+                             'check_out':check_out,
+                             'total_price':total_price}, status=400)
 
         # Add check_in and check_out to request data
         mutable_data = request.data
