@@ -123,7 +123,7 @@ class CreateGuests(generics.CreateAPIView):
     def get_serializer_context(self):
         user = self.request.user
         post_id = self.kwargs.get('post_pk')
-        return {'user': user, 'post': int(post_id) if post_id else None}
+        return {'user': user, 'post': int(post_id)}
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -161,7 +161,7 @@ class CreateGuests(generics.CreateAPIView):
             }
 
             try:
-                payment = Payment.objects.create(
+                Payment.objects.create(
                     user=user,
                     reservation=reservation,
                     total_amount=total_price,
@@ -176,8 +176,8 @@ class CreateGuests(generics.CreateAPIView):
                         {
                             "message": "Reservation and Payment initiated successfully.",
                             "reservation_details": serializer.data,
-                            "payment_link": response_data["data"]["link"],
-                            "reference": reference,
+                            # "payment_link": response_data["data"]["link"],
+                            # "reference": reference,
                         },
                         status=status.HTTP_201_CREATED,
                     )
@@ -320,7 +320,7 @@ class CustomerDetailsViews(generics.CreateAPIView):
                             "customer_id": reservation.id,
                             "reservation_details": serializer.data,
                             "customer_details": reservation.customer_details,
-                            "total":total_price,
+                            "total_price":total_price,
                             "payment_link": response_data["data"]["link"],
                             "reference": reference,
                         },

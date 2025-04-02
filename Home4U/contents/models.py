@@ -129,7 +129,7 @@ class ReservationDetails(models.Model):
         
                 # If remaining days exceed half a month, count it as a full month
                 if remaining_days > 15:
-                    num_months += 2
+                    num_months += 1
                 print(f"Number of months: {num_months}")
                 print(f"Post price: {self.post.price}")
                 total_price = num_months * self.post.price 
