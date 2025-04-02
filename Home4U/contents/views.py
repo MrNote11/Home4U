@@ -266,11 +266,11 @@ class CustomerDetailsViews(generics.CreateAPIView):
         check_out = request.session.get('check_out')
         total_price = request.session.get('total_price')
 
-        if not check_in or not check_out or total_price is None:
-            return Response({'error': 'Missing data in session',
-                             'check_in':check_in,
-                             'check_out':check_out,
-                             'total_price':total_price}, status=400)
+        # if not check_in or not check_out or total_price is None:
+        #     return Response({'error': 'Missing data in session',
+        #                      'check_in':check_in,
+        #                      'check_out':check_out,
+        #                      'total_price':total_price}, status=400)
 
 
         serializer = ReservationDetailSerializer(
