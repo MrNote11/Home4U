@@ -135,11 +135,8 @@ class CreateGuests(generics.CreateAPIView):
             if total_price <= 0:
                 return Response({"error": "Invalid total price"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Store check_in, check_out, and total_price in session
-            request.session['check_in'] = str(reservation.check_in)
-            request.session['check_out'] = str(reservation.check_out)
-            request.session['total_price'] = float(total_price)
 
+            
             email = user.email
             reference = str(uuid.uuid4())
             flutterwave_url = f"{settings.FLW_API_URL}/payments"
@@ -154,6 +151,17 @@ class CreateGuests(generics.CreateAPIView):
                 "payment_type": "card",
                 "customer": {"email": email},
             }
+            
+            
+            request.session['payment_payload'] = {
+                "tx_ref": reference,
+                "amount": float(total_price),
+                "currency": "NGN",
+                "redirect_url": f"{vercel_url}/payments/callback/",
+                "payment_type": "card",
+                "customer": {"email": email},
+            }
+            request.session.save()  # ✅ Ensure session data is saved
 
             headers = {
                 "Authorization": f"Bearer {secret_key}",
@@ -262,9 +270,7 @@ class CustomerDetailsViews(generics.CreateAPIView):
         user = request.user
 
         # Retrieve values from session
-        check_in = request.session.get('check_in')
-        check_out = request.session.get('check_out')
-        total_price = request.session.get('total_price')
+
 
         # if not check_in or not check_out or total_price is None:
         #     return Response({'error': 'Missing data in session',
@@ -287,14 +293,10 @@ class CustomerDetailsViews(generics.CreateAPIView):
             secret_key = settings.FLW_SECRET_KEY
             vercel_url = getattr(settings, "VERCEL_APP_URL", None)
 
-            payload = {
-                "tx_ref": reference,
-                "amount": float(total_price),
-                "currency": "NGN",
-                "redirect_url": f"{vercel_url}/payments/callback/",
-                "payment_type": "card",
-                "customer": {"email": email},
-            }
+            payment_payload = request.session.get('payment_payload')
+            if not payment_payload:
+                return Response({"error": "Payment payload missing in session."}, status=400)
+
 
             headers = {
                 "Authorization": f"Bearer {secret_key}",
@@ -302,14 +304,7 @@ class CustomerDetailsViews(generics.CreateAPIView):
             }
 
             try:
-                payment = Payment.objects.create(
-                    user=user,
-                    reservation=reservation,
-                    total_amount=total_price,
-                    reference=reference,
-                    status="pending",
-                )
-                response = requests.post(flutterwave_url, json=payload, headers=headers)
+                response = requests.post(flutterwave_url, json=payment_payload, headers=headers)
                 response_data = response.json()
 
                 if response.status_code == 200 and response_data.get("status") == "success":
