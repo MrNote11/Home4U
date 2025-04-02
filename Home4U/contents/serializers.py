@@ -22,7 +22,7 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
     customer_last_name = serializers.CharField(write_only=True)
     customer_email = serializers.EmailField(write_only=True)
     customer_phone_number = serializers.CharField(write_only=True)
-    total_price = serializers.SerializerMethodField()
+    #total_price = serializers.SerializerMethodField()
 
 
     class Meta:
