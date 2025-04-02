@@ -7,7 +7,7 @@ import re
 from django.db.models import Sum, Count
 from django.contrib.auth import get_user_model
 from dateutil.relativedelta import relativedelta  # ✅ Import for month difference
-
+from payments.models import Payment
 
 class ReservationImagesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -22,11 +22,13 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
     customer_last_name = serializers.CharField(write_only=True)
     customer_email = serializers.EmailField(write_only=True)
     customer_phone_number = serializers.CharField(write_only=True)
+    total_price = serializers.SerializerMethodField()
+
 
     class Meta:
         model = ReservationDetails
         fields = (
-            'first_name', 'last_name', 'phone_number', 'email','check_in', 'check_out',
+            'first_name', 'last_name', 'phone_number', 'email',
             'customer_first_name', 'customer_last_name', 'customer_email', 'customer_phone_number'
         )
 
@@ -43,7 +45,12 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
         """Get the logged-in user's phone number if available"""
         user = self.context.get('user')
         return getattr(user, 'profile', {}).get('phone_number', None) or getattr(user, 'phone_number', None) if user else None
-
+    
+    def get_total_price(self, obj):
+        """Retrieve the calculated total price."""
+        payment = Payment.objects.filter(reservation=obj).first()
+        return payment.total_amount if payment else None
+    
     def validate(self, data):
         """Ensure the provided customer details match the logged-in user"""
         user = self.context.get('user')

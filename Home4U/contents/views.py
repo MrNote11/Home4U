@@ -272,13 +272,9 @@ class CustomerDetailsViews(generics.CreateAPIView):
                              'check_out':check_out,
                              'total_price':total_price}, status=400)
 
-        # Add check_in and check_out to request data
-        mutable_data = request.data
-        mutable_data['check_in'] = check_in
-        mutable_data['check_out'] = check_out
 
         serializer = ReservationDetailSerializer(
-            data=mutable_data,
+            data=request.data,
             context={'post': post, 'user': user}
         )
 
@@ -323,7 +319,7 @@ class CustomerDetailsViews(generics.CreateAPIView):
                             "customer_id": reservation.id,
                             "reservation_details": serializer.data,
                             "customer_details": reservation.customer_details,
-                            "total_price":total_price,
+                            #"total_price":total_price,
                             "payment_link": response_data["data"]["link"],
                             "reference": reference,
                         },
