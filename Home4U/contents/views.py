@@ -249,6 +249,7 @@ class CreateGuests(generics.CreateAPIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class CustomerDetailsView(APIView):
     """Handles customer reservation and payment initiation"""
     permission_classes = [IsAuthenticated]
@@ -265,16 +266,15 @@ class CustomerDetailsView(APIView):
 
         total_amount = reservation.calculate_total_price()
 
-        # ✅ Pass user and post context for validation
         serializer = ReservationDetailSerializer(
             reservation,
             data=request.data,
             context={'post': post.id, 'user': user},
-            partial = True
+            partial=True
         )
 
         if serializer.is_valid():
-            updated_reservation = serializer.save()
+            updated_reservation = serializer.save()  # ✅ Now correctly returns an instance
 
             reference = str(uuid.uuid4())
             flutterwave_url = f"{settings.FLW_API_URL}/payments"
@@ -300,22 +300,17 @@ class CustomerDetailsView(APIView):
                 response_data = response.json()
 
                 if response.status_code == 200 and response_data.get("status") == "success":
-                    return Response(
-                        {
-                            "message": "Reservation updated and payment initiated successfully!",
-                            "customer_id": updated_reservation.id,
-                            "reservation_details": serializer.data,
-                            "payment_link": response_data["data"]["link"],
-                            "reference": reference,
-                        },
-                        status=201,
-                    )
+                    return Response({
+                        "message": "Reservation updated and payment initiated successfully!",
+                        "customer_id": updated_reservation.id,  # ✅ No more errors
+                        "reservation_details": serializer.data,
+                        "payment_link": response_data["data"]["link"],
+                        "reference": reference,
+                    }, status=201)
 
                 return Response({"error": "Failed to initiate payment"}, status=400)
 
             except requests.exceptions.RequestException:
                 return Response({"error": "Payment initiation failed"}, status=500)
-            except Exception as e:
-                return Response({"error": f"Unexpected error: {e}"}, status=500)
 
         return Response(serializer.errors, status=400)
