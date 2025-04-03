@@ -258,13 +258,15 @@ class CustomerDetailsView(APIView):
         """Updates reservation and initiates payment"""
 
         post_id = get_object_or_404(ReservationContents, id=post_id)
+        print(f"post_id: {post_id}")
         user = request.user
-        reservation = ReservationDetails.objects.filter(post_id=post_id, user=user).first()
+        reservation = ReservationDetails.objects.filter(post_id=post_id).last()
+        print(f"reservation: {reservation}")
 
-        if not reservation:
-            return Response({"error": "No reservation found for this post."}, status=400)
-
+        # if not reservation:
+        #     return Response({"error": "No reservation found for this post."}, status=400)
         total_amount = reservation.calculate_total_price()
+        print(f"total:{total_amount}")
 
         serializer = ReservationDetailSerializer(
             reservation,

@@ -117,7 +117,7 @@ class ReservationDetails(models.Model):
     check_out = models.DateField(blank=True, null=True)
 
     def __str__(self):
-            return f"Image {self.id}"
+            return f"id {self.id}"
     
 
     def calculate_total_price(self):

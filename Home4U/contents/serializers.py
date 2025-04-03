@@ -150,23 +150,7 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
 
         return data
 
-    def create(self, validated_data):
-        """Create a reservation entry"""
 
-        user = self.context.get('user')
-        post_id = self.context.get('post')
-
-        try:
-            post = ReservationContents.objects.get(id=post_id)
-        except ReservationContents.DoesNotExist:
-            raise serializers.ValidationError("Invalid post ID provided.")
-
-        # Create reservation
-        reservation = ReservationDetails.objects.create(
-            user=user, post=post, **validated_data
-        )
-
-        return reservation
 
     def update(self, instance, validated_data):
         """Update reservation details"""
