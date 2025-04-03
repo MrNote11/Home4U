@@ -156,13 +156,6 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
         user = self.context.get('user')
         post_id = self.context.get('post')
 
-        # Extract customer details and remove them from validated_data
-        customer_first_name = validated_data.pop('customer_first_name', None)
-        customer_last_name = validated_data.pop('customer_last_name', None)
-        customer_email = validated_data.pop('customer_email', None)
-        customer_phone_number = validated_data.pop('customer_phone_number', None)
-
-        # Ensure post exists
         try:
             post = ReservationContents.objects.get(id=post_id)
         except ReservationContents.DoesNotExist:
@@ -178,7 +171,7 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Update reservation details"""
 
-        user = self.context.get('user')
+      
         post_id = self.context.get('post')
 
         if not isinstance(post_id, int):
