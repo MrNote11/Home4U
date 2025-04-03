@@ -266,17 +266,17 @@ class CustomerDetailsViews(generics.CreateAPIView):
         print(f"post: {post}")
         user = request.user
 
-        reservations = ReservationDetails.objects.filter(user=user, post=post)
+        reservations = ReservationDetails.objects.filter(user=user, post=post).first()
         print(f"reservation:{reservations}")
-        if not reservations.exists():
+        if not reservations:
             return Response({"error": "No reservation found for this post."}, status=400)
 
         # Example: Get total price from all reservations
-        for reservation in reservations:
-             total_amount = reservation.calculate_total_price()
+        # for reservation in reservations:
+        #      total_amount = reservation.calculate_total_price()
 
         # # ✅ Call calculate_total_price() from ReservationDetails
-        # total_amount = reservation.calculate_total_price()
+        total_amount = reservations.calculate_total_price()
 
         serializer = ReservationDetailSerializer(
             data=request.data,
