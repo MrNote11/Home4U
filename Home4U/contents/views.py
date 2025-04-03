@@ -135,10 +135,7 @@ class CreateGuests(generics.CreateAPIView):
             if total_price <= 0:
                 return Response({"error": "Invalid total price"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Store check_in, check_out, and total_price in session
-            request.session['check_in'] = str(reservation.check_in)
-            request.session['check_out'] = str(reservation.check_out)
-            request.session['total_price'] = float(total_price)
+
 
             email = user.email
             reference = str(uuid.uuid4())
@@ -262,7 +259,7 @@ class CustomerDetailsViews(generics.CreateAPIView):
         """Handles customer reservation and payment initiation"""
 
         # ✅ Ensure ReservationContents exists
-        post = get_object_or_404(ReservationContents, pk=post_id)
+        post = get_object_or_404(ReservationContents, id=post_id)
         print(f"post: {post}")
         user = request.user
         print(f"user: {user}")
