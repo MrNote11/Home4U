@@ -114,7 +114,7 @@ class GuestsSerializers(serializers.ModelSerializer):
     
 class ReservationDetailSerializer(serializers.ModelSerializer):
     """Handles reservation details and ensures user validation"""
-
+    
     customer_first_name = serializers.CharField(write_only=True)
     customer_last_name = serializers.CharField(write_only=True)
     customer_email = serializers.EmailField(write_only=True)
@@ -126,6 +126,10 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
             'first_name', 'last_name', 'phone_number', 'email',
             'customer_first_name', 'customer_last_name', 'customer_email', 'customer_phone_number'
         )
+    
+    def get_total_price(self, obj):
+        """Retrieve the calculated total price."""
+        return obj.calculate_total_price()    
 
     def validate(self, data):
         """Ensure customer details match the logged-in user"""
@@ -157,7 +161,7 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
 
       
         post_id = self.context.get('post')
-
+        print(f"post_id:{post_id}")
         if not isinstance(post_id, int):
             raise serializers.ValidationError("Invalid post ID. Expected an integer.")
 
@@ -167,17 +171,18 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
         validated_data.pop('customer_email', None)
         validated_data.pop('customer_phone_number', None)
 
-        try:
-            post = ReservationContents.objects.get(id=post_id)
-        except ReservationContents.DoesNotExist:
-            raise serializers.ValidationError("Invalid post ID provided.")
+        # try:
+        #     post = ReservationContents.objects.get(id=post_id)
+        #     print(f"post_serializer: {post}")
+        # except ReservationContents.DoesNotExist:
+        #     raise serializers.ValidationError("Invalid post ID provided.")
 
         # ✅ Update instance fields
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.phone_number = validated_data.get('phone_number', instance.phone_number)
         instance.email = validated_data.get('email', instance.email)
-        instance.post = post  # ✅ Ensure reservation is linked to the correct post
+        # instance.post = post  # ✅ Ensure reservation is linked to the correct post
         instance.save()  # ✅ Save changes
 
         return instance  # ✅ Return the updated instance

@@ -175,21 +175,20 @@ new_post = NewHousingContentsViewList.as_view()
 
 
 class CreateGuests(generics.CreateAPIView):
-    queryset = ReservationDetails.objects.all()
     serializer_class = GuestsSerializers
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         post_id = self.kwargs.get('post_pk')
         return ReservationDetails.objects.filter(post_id=post_id)
-
+   
     def get_serializer_context(self):
         user = self.request.user
         post_id = self.kwargs.get('post_pk')
         return {'user': user, 'post': int(post_id)}
 
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+    def post(self, *args, **kwargs):
+        serializer = self.get_serializer(data=self.request.data)
         if serializer.is_valid():
             reservation = serializer.save()
             user = self.request.user
@@ -259,8 +258,11 @@ class CustomerDetailsView(APIView):
 
         post_id = get_object_or_404(ReservationContents, id=post_id)
         print(f"post_id: {post_id}")
+        post_id = post_id.id
+        print(f"post_id.id_view: {post_id}")
         user = request.user
         reservation = ReservationDetails.objects.filter(post_id=post_id).last()
+        print(f"reservation:{reservation}")
         print(f"reservation: {reservation}")
 
         # if not reservation:
@@ -271,9 +273,10 @@ class CustomerDetailsView(APIView):
         serializer = ReservationDetailSerializer(
             reservation,
             data=request.data,
-            context={'post': post_id.id, 'user': user},
+            context={'post': post_id, 'user': user},
             partial=True
         )
+        print(f"serializer: {serializer}")
 
         if serializer.is_valid():
             updated_reservation = serializer.save()  # ✅ Now correctly returns an instance
