@@ -173,32 +173,37 @@ class NewHousingContentsViewList(generics.ListAPIView):
 new_post = NewHousingContentsViewList.as_view()
 
 
-
 class CreateGuests(generics.CreateAPIView):
     serializer_class = GuestsSerializers
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        post_id = self.kwargs.get('post_pk')
-        post_id = get_object_or_404(ReservationContents, id=post_id)
-        return ReservationDetails.objects.filter(post_id=post_id)
-   
+        # Retrieve the ReservationContents object using the post_pk URL parameter.
+        post = get_object_or_404(ReservationContents, id=self.kwargs.get('post_pk'))
+        # Return all ReservationDetails linked to this post.
+        return ReservationDetails.objects.filter(post_id=post.id)
+    
     def get_serializer_context(self):
+        # Provide context to the serializer, including the logged-in user and the post ID.
         user = self.request.user
-        post_id = self.kwargs.get('post_pk')
-        post_id = post_id
-        return {'user': user, 'post': int(post_id)}
-
-    def post(self, *args, **kwargs):
-        serializer = self.get_serializer(data=self.request.data)
+        post_pk = self.kwargs.get('post_pk')
+        return {'user': user, 'post': int(post_pk)}
+    
+    def post(self, request, *args, **kwargs):
+        # Initialize the serializer with the incoming data.
+        serializer = self.get_serializer(data=request.data)
+        
         if serializer.is_valid():
+            # Save the reservation instance with the provided data and context.
             reservation = serializer.save()
             user = self.request.user
             total_price = reservation.calculate_total_price()
 
+            # If the calculated price is invalid, return an error.
             if total_price <= 0:
                 return Response({"error": "Invalid total price"}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Prepare the payment initiation parameters.
             email = user.email
             reference = str(uuid.uuid4())
             flutterwave_url = f"{settings.FLW_API_URL}/payments"
@@ -220,6 +225,7 @@ class CreateGuests(generics.CreateAPIView):
             }
 
             try:
+                # Create a Payment record linked to this reservation.
                 Payment.objects.create(
                     user=user,
                     reservation=reservation,
@@ -227,6 +233,7 @@ class CreateGuests(generics.CreateAPIView):
                     reference=reference,
                     status="pending",
                 )
+                # Initiate the payment by sending a POST request to the payment API.
                 response = requests.post(flutterwave_url, json=payload, headers=headers)
                 response_data = response.json()
 
@@ -236,12 +243,9 @@ class CreateGuests(generics.CreateAPIView):
                             "message": "Reservation and Payment initiated successfully.",
                             "reservation_details": serializer.data,
                             "payment": total_price
-                            # "payment_link": response_data["data"]["link"],
-                            # "reference": reference,
                         },
                         status=status.HTTP_201_CREATED,
                     )
-
                 return Response({"error": "Failed to initiate payment"}, status=status.HTTP_400_BAD_REQUEST)
 
             except requests.exceptions.RequestException:
@@ -249,7 +253,9 @@ class CreateGuests(generics.CreateAPIView):
             except Exception as e:
                 return Response({"error": f"Database or unexpected error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
+            # Return serializer errors if validation fails.
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class CustomerDetailsView(APIView):
     """Handles customer reservation and payment initiation"""
