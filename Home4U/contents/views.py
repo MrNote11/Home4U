@@ -266,8 +266,9 @@ class CustomerDetailsView(APIView):
         post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         post_id = post.id  # Get valid post_id
         user = request.user
-
+        
         reservation = ReservationDetails.objects.filter(user=user, post_id=post_id).first()
+        print(f"reservation_value: {reservation}")
 
         if not reservation:
             return Response({"error": "No reservation found for this post."}, status=400)
