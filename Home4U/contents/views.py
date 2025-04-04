@@ -233,6 +233,7 @@ class CreateGuests(generics.CreateAPIView):
                         {
                             "message": "Reservation and Payment initiated successfully.",
                             "reservation_details": serializer.data,
+                            "payment": total_price
                             # "payment_link": response_data["data"]["link"],
                             # "reference": reference,
                         },
@@ -248,27 +249,22 @@ class CreateGuests(generics.CreateAPIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class CustomerDetailsView(APIView):
     """Handles customer reservation and payment initiation"""
     permission_classes = [IsAuthenticated]
 
     def post(self, request, post_id):
         """Updates reservation and initiates payment"""
-
-        post_id = get_object_or_404(ReservationContents, id=post_id)
-        print(f"post_id: {post_id}")
-        post_id = post_id.id
-        print(f"post_id.id_view: {post_id}")
+        post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
+        post_id = post.id  # Get valid post_id
         user = request.user
-        reservation = ReservationDetails.objects.filter(post_id=post_id).last()
-        print(f"reservation:{reservation}")
-        print(f"reservation: {reservation}")
 
-        # if not reservation:
-        #     return Response({"error": "No reservation found for this post."}, status=400)
+        reservation = ReservationDetails.objects.filter(post_id=post_id).first()
+
+        if not reservation:
+            return Response({"error": "No reservation found for this post."}, status=400)
+
         total_amount = reservation.calculate_total_price()
-        print(f"total:{total_amount}")
 
         serializer = ReservationDetailSerializer(
             reservation,
@@ -276,12 +272,12 @@ class CustomerDetailsView(APIView):
             context={'post': post_id, 'user': user},
             partial=True
         )
-        print(f"serializer: {serializer}")
 
         if serializer.is_valid():
-            updated_reservation = serializer.save()  # ✅ Now correctly returns an instance
-
+            updated_reservation = serializer.save()
             reference = str(uuid.uuid4())
+
+            # Initiate payment
             flutterwave_url = f"{settings.FLW_API_URL}/payments"
             secret_key = settings.FLW_SECRET_KEY
             vercel_url = getattr(settings, "VERCEL_APP_URL", None)
@@ -307,7 +303,7 @@ class CustomerDetailsView(APIView):
                 if response.status_code == 200 and response_data.get("status") == "success":
                     return Response({
                         "message": "Reservation updated and payment initiated successfully!",
-                        "customer_id": updated_reservation.id,  # ✅ No more errors
+                        "customer_id": updated_reservation.id,
                         "reservation_details": serializer.data,
                         "payment_link": response_data["data"]["link"],
                         "reference": reference,
