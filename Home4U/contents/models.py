@@ -119,24 +119,32 @@ class ReservationDetails(models.Model):
     def __str__(self):
             return f"id {self.id}"
     
-
     def calculate_total_price(self):
-
         """Calculate the total price based on months stayed and post price."""
-        if self.check_in and self.check_out and self.post:
-                print(f"Check-in: {self.check_in}, Check-out: {self.check_out}")
-                delta = relativedelta(self.check_out, self.check_in)
-                num_months = delta.years * 12 + delta.months
-                remaining_days = (self.check_out - self.check_in).days - (num_months * 30)
-        
-                # If remaining days exceed half a month, count it as a full month
-                if remaining_days > 15:
-                    num_months += 1
-                print(f"Number of months: {num_months}")
-                print(f"Post price: {self.post.price}")
-                total_price = num_months * self.post.price 
-                print(f"Total price: {total_price}")
-                return total_price
+        if not self.check_in or not self.check_out:
+            print("Missing check-in or check-out date")
+            return 0  # Return 0 instead of crashing
+
+        if not self.post or not self.post.price:
+            print("Post or post price is missing")
+            return 0  # Prevent NoneType error
+
+        print(f"Check-in: {self.check_in}, Check-out: {self.check_out}")
+        delta = relativedelta(self.check_out, self.check_in)
+        num_months = delta.years * 12 + delta.months
+        remaining_days = (self.check_out - self.check_in).days - (num_months * 30)
+
+        # If remaining days exceed half a month, count it as a full month
+        if remaining_days > 15:
+            num_months += 1
+
+        print(f"Number of months: {num_months}")
+        print(f"Post price: {self.post.price}")
+        total_price = num_months * self.post.price
+        print(f"Total price: {total_price}")
+
+        return total_price
+
         
 class ReservationImages(models.Model):
         reservation = models.ForeignKey(ReservationContents, on_delete=models.CASCADE, related_name='images')
