@@ -180,11 +180,13 @@ class CreateGuests(generics.CreateAPIView):
 
     def get_queryset(self):
         post_id = self.kwargs.get('post_pk')
+        post_id = get_object_or_404(ReservationContents, id=post_id)
         return ReservationDetails.objects.filter(post_id=post_id)
    
     def get_serializer_context(self):
         user = self.request.user
         post_id = self.kwargs.get('post_pk')
+        post_id = post_id
         return {'user': user, 'post': int(post_id)}
 
     def post(self, *args, **kwargs):
@@ -259,7 +261,7 @@ class CustomerDetailsView(APIView):
         post_id = post.id  # Get valid post_id
         user = request.user
 
-        reservation = ReservationDetails.objects.filter(post_id=post_id).first()
+        reservation = ReservationDetails.objects.filter(user=user, post_id=post_id).first()
 
         if not reservation:
             return Response({"error": "No reservation found for this post."}, status=400)

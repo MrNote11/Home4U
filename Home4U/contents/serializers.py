@@ -104,12 +104,12 @@ class GuestsSerializers(serializers.ModelSerializer):
         if not post_id:
             raise serializers.ValidationError("Post ID is required.")
 
-        try:
-            post = ReservationContents.objects.get(id=post_id)
-        except ReservationContents.DoesNotExist:
-            raise serializers.ValidationError("Invalid post ID provided.")
+        # try:
+        #     post = ReservationContents.objects.get(id=post_id)
+        # except ReservationContents.DoesNotExist:
+        #     raise serializers.ValidationError("Invalid post ID provided.")
 
-        return ReservationDetails.objects.create(user=user, post=post, **validated_data)
+        return ReservationDetails.objects.create(user=user, post_id=post_id, **validated_data)
     
     
 class ReservationDetailSerializer(serializers.ModelSerializer):
