@@ -21,6 +21,7 @@ from django.conf import settings
 import requests
 
 
+
 class Round(Func):
     function = 'ROUND'
     template = "%(function)s(%(expressions)s, 1)"
@@ -173,35 +174,45 @@ class NewHousingContentsViewList(generics.ListAPIView):
 new_post = NewHousingContentsViewList.as_view()
 
 
-class CreateGuests(generics.CreateAPIView):
-    serializer_class = GuestsSerializers
+class CreateGuests(APIView):
+    # serializer_class = GuestsSerializers
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        # Retrieve the ReservationContents object using the post_pk URL parameter.
-        post = get_object_or_404(ReservationContents, id=self.kwargs.get('post_pk'))
-        # Return all ReservationDetails linked to this post.
-        return ReservationDetails.objects.filter(post_id=post.id)
+    # def get_queryset(self):
+        
+        # post = get_object_or_404(ReservationContents, id=self.kwargs.get('post_pk'))
+       
+        # return ReservationDetails.objects.filter(post_id=post.id)
     
-    def get_serializer_context(self):
-        # Provide context to the serializer, including the logged-in user and the post ID.
-        user = self.request.user
-        post_pk = self.kwargs.get('post_pk')
-        return {'user': user, 'post': int(post_pk)}
+    # def get_serializer_context(self):
+    #     # Provide context to the serializer, including the logged-in user and the post ID.
+        
+    #     user = self.request.user
+    #     post_pk = self.kwargs.get('post_pk')
+    #     return {'user': user, 'post': int(post_pk)}
     
-    def post(self, request, *args, **kwargs):
+    def post(self, request, post_pk):
+        post = get_object_or_404(ReservationContents, id=post_pk)
+        
         # Initialize the serializer with the incoming data.
-        serializer = self.get_serializer(data=request.data)
+        
+        serializer = GuestsSerializers(data=request.data)
         
         if serializer.is_valid():
             # Save the reservation instance with the provided data and context.
-            reservation = serializer.save()
+            reservation = serializer.save(post=post)
             user = self.request.user
             total_price = reservation.calculate_total_price()
-
+            
+            # request.session['total_price'] = total_price
+            # request.session.save()
+            # total = request.session.get('total_price')
+            # print(total)
             # If the calculated price is invalid, return an error.
-            if total_price <= 0:
-                return Response({"error": "Invalid total price"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            
+            # if total_price <= 0:
+            #     return Response({"error": "Invalid total price"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Prepare the payment initiation parameters.
             email = user.email
@@ -264,10 +275,9 @@ class CustomerDetailsView(APIView):
     def post(self, request, post_id):
         """Updates reservation and initiates payment"""
         post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
-        post_id = post.id  # Get valid post_id
         user = request.user
         
-        reservation = ReservationDetails.objects.filter(user=user, post_id=post_id).first()
+        reservation = ReservationDetails.objects.filter(post=post).first()
         print(f"reservation_value: {reservation}")
 
         if not reservation:
@@ -278,7 +288,7 @@ class CustomerDetailsView(APIView):
         serializer = ReservationDetailSerializer(
             reservation,
             data=request.data,
-            context={'post': post_id, 'user': user},
+            context={'post': post.id, 'user': user},
             partial=True
         )
 

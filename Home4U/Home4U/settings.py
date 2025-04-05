@@ -57,9 +57,11 @@ INSTALLED_APPS = [
     'cloudinary',
     'cloudinary_storage',
     'django.contrib.staticfiles',
+    #custom apps
     'accounts',
     'payments',
     'contents',
+    #third party packages
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',

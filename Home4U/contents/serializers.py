@@ -94,20 +94,7 @@ class GuestsSerializers(serializers.ModelSerializer):
         # Return the calculated total price from the model method.
         return obj.calculate_total_price()
 
-    def create(self, validated_data):
-        # Retrieve the user and post id from the serializer context.
-        user = self.context.get('user')
-        post_id = self.context.get('post')
 
-        if not post_id:
-            raise serializers.ValidationError("Post ID is required.")
-
-        # Create the reservation ensuring it is linked to the correct post and user.
-        reservation = ReservationDetails.objects.create(user=user, post_id=post_id, **validated_data)
-        # Terminal Comment:
-        # This line creates a new reservation entry using the validated data,
-        # and explicitly sets the user and post_id to ensure proper linkage.
-        return reservation
 
     
 class ReservationDetailSerializer(serializers.ModelSerializer):
