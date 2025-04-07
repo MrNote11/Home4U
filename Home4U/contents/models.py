@@ -117,7 +117,7 @@ class ReservationDetails(models.Model):
     check_out = models.DateField(blank=True, null=True)
 
     def __str__(self):
-            return f"id {self.id}"
+            return f"post: {self.post}, check_in: {self.check_in}, check_out; {self.check_out}"
     
     def calculate_total_price(self):
         """Calculate the total price based on months stayed and post price."""

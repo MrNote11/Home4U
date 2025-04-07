@@ -104,18 +104,19 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
     customer_last_name = serializers.CharField(write_only=True)
     customer_email = serializers.EmailField(write_only=True)
     customer_phone_number = serializers.CharField(write_only=True)
-    days = serializers.CharField(read_only=True)
+    # days = serializers.CharField(read_only=True)
 
     class Meta:
         model = ReservationDetails
         fields = (
-            'first_name', 'last_name', 'phone_number', 'email', 'check_in', 'check_out', 'days',
+            'first_name', 'last_name', 'phone_number', 'email',
             'customer_first_name', 'customer_last_name', 'customer_email', 'customer_phone_number'
         )
     
-    def get_total_price(self, obj):
-        """Retrieve the calculated total price."""
-        return obj.calculate_total_price()    
+    # def get_total_price(self, obj):
+    #     print(f"obj: {obj}")
+    #     """Retrieve the calculated total price."""
+    #     return obj.calculate_total_price()    
 
     def validate(self, data):
         """Ensure customer details match the logged-in user"""
@@ -137,6 +138,11 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
 
         if errors:
             raise serializers.ValidationError(errors)
+        
+        data.pop('customer_first_name', None)
+        data.pop('customer_last_name', None)
+        data.pop('customer_email', None)
+        data.pop('customer_phone_number', None)
 
         return data
 
@@ -144,58 +150,18 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         """Update reservation details"""
-
-      
-        post_id = self.context.get('post')
-        print(f"post_id:{post_id}")
-        if not isinstance(post_id, int):
-            raise serializers.ValidationError("Invalid post ID. Expected an integer.")
-
-        # Extract and discard customer details
-        validated_data.pop('customer_first_name', None)
-        validated_data.pop('customer_last_name', None)
-        validated_data.pop('customer_email', None)
-        validated_data.pop('customer_phone_number', None)
-
-        # try:
-        #     post = ReservationContents.objects.get(id=post_id)
-        #     print(f"post_serializer: {post}")
-        # except ReservationContents.DoesNotExist:
-        #     raise serializers.ValidationError("Invalid post ID provided.")
-
-        # ✅ Update instance fields
-        instance.first_name = validated_data.get('first_name', instance.first_name)
-        instance.last_name = validated_data.get('last_name', instance.last_name)
-        instance.phone_number = validated_data.get('phone_number', instance.phone_number)
-        instance.email = validated_data.get('email', instance.email)
-        instance.check_in = validated_data.get('check_in', instance.check_in)
-        instance.check_out = validated_data.get('check_out', instance.check_out)
-        # instance.post = post  # ✅ Ensure reservation is linked to the correct post
+        print(f"validated_data: {validated_data}")
+        print(f"instance: {instance}")
+        print(f"instance.first_name1: {instance.first_name}")
+        instance.first_name = validated_data.get('first_name')
+        print(f"instance.first_name2: {instance.first_name}")
+        instance.last_name = validated_data.get('last_name')
+        instance.phone_number = validated_data.get('phone_number')
+        instance.email = validated_data.get('email')
+        instance.check_in = validated_data.get('check_in')
+        instance.check_out = validated_data.get('check_out')
         instance.save()  # ✅ Save changes
 
         return instance  # ✅ Return the updated instance
 
-    
-    
-    # def create(self, validated_data):
-    #     """Creates a reservation entry"""
-    #     user = self.context.get('user')
-    #     post = self.context.get('post')
-        
-        
-    #     if not post:
-    #         raise serializers.ValidationError("Post is required.")
-        
-    #     customer_details = {
-    #     "customer_first_name": validated_data.pop('customer_first_name', user.first_name),
-    #     "customer_last_name": validated_data.pop('customer_last_name', user.last_name),
-    #     "customer_email": validated_data.pop('customer_email', user.email),
-    #     "customer_phone_number": validated_data.pop('customer_phone_number', getattr(user, 'phone_number', None))
-    #     }
-        
-    #     reservation = ReservationDetails.objects.create(user=user, post=post, **validated_data)
-
-    #     reservation.customer_details = customer_details  # Attach for reference
-
-    #     return reservation
-            
+   

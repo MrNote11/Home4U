@@ -192,6 +192,7 @@ class CreateGuests(APIView):
     #     return {'user': user, 'post': int(post_pk)}
     
     def post(self, request, post_pk):
+      
         post = get_object_or_404(ReservationContents, id=post_pk)
         
         # Initialize the serializer with the incoming data.
@@ -277,24 +278,24 @@ class CustomerDetailsView(APIView):
         post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
         
-        reservation = ReservationDetails.objects.filter(post=post).first()
+        reservation = ReservationDetails.objects.filter(post=post)
         print(f"reservation_value: {reservation}")
 
         if not reservation:
             return Response({"error": "No reservation found for this post."}, status=400)
 
-        total_amount = reservation.calculate_total_price()
-
+        
         serializer = ReservationDetailSerializer(
             reservation,
             data=request.data,
-            context={'post': post.id, 'user': user},
+            context={'user': user},
             partial=True
         )
 
         if serializer.is_valid():
             updated_reservation = serializer.save()
             reference = str(uuid.uuid4())
+            total_amount = updated_reservation.calculate_total_price()
 
             # Initiate payment
             flutterwave_url = f"{settings.FLW_API_URL}/payments"
