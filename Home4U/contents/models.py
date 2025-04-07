@@ -139,7 +139,7 @@ class ReservationDetails(models.Model):
 
         print(f"Number of months: {num_months}")
         print(f"Post price: {self.house.price}")
-        total_price = num_months * self.house.price * 50
+        total_price = num_months * self.house.price + 50
         print(f"Total price: {total_price}")
 
         return total_price
