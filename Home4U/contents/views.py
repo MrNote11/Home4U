@@ -255,7 +255,7 @@ class CustomerDetailsHousingView(APIView):
                 "tx_ref": reference,
                 "amount": float(total_amount),
                 "currency": "NGN",
-                "redirect_url": f"{vercel_url}/payments/callback/",
+                "redirect_url": f"{vercel_url}/payments/confirmation/",
                 "payment_type": "card",
                 "customer": {"email": user.email},
             }
