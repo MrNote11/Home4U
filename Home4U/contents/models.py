@@ -116,7 +116,7 @@ class ReservationDetails(models.Model):
     booking = models.BooleanField(default=False)
 
     def __str__(self):
-            return f"post: {self.house}, check_in: {self.check_in}, check_out; {self.check_out}"
+            return f"post: {self.user}, {self.house}, check_in: {self.check_in}, check_out; {self.check_out}"
     
     def calculate_total_price(self):
         """Calculate the total price based on months stayed and post price."""
@@ -139,7 +139,7 @@ class ReservationDetails(models.Model):
 
         print(f"Number of months: {num_months}")
         print(f"Post price: {self.house.price}")
-        total_price = num_months * self.house.price
+        total_price = num_months * self.house.price * 50
         print(f"Total price: {total_price}")
 
         return total_price

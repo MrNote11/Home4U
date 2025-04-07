@@ -159,8 +159,6 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.phone_number = validated_data.get('phone_number', instance.phone_number)
         instance.email = validated_data.get('email', instance.email)
-        # instance.check_in = validated_data.get('check_in', )
-        # instance.check_out = validated_data.get('check_out')
         instance.save()  # ✅ Save changes
 
         return instance  # ✅ Return the updated instance
