@@ -214,7 +214,7 @@ class CustomerDetailsHousingView(APIView):
         #post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
         
-        reservation = ReservationDetails.objects.filter(house=id, user=user).first()
+        reservation = ReservationDetails.objects.get(house=id, user=user)
         
         print(f"reservation_value: {reservation}")
         
@@ -255,14 +255,8 @@ class CustomerDetailsHousingView(APIView):
 
             try:
                  # Create a Payment record linked to this reservation.
-                payment=Payment.objects.create(
-                    user=user,
-                    reservation=reservation,
-                    total_amount=total_amount,
-                    reference=reference,
-                )
+
                 
-                payment.status=True
                 response = requests.post(flutterwave_url, json=payload, headers=headers)
                 response_data = response.json()
 
