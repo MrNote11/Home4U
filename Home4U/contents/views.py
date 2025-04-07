@@ -278,10 +278,8 @@ class CustomerDetailsView(APIView):
         post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
         
-        reservation = ReservationDetails.objects.filter(post=post).last()
+        reservation = ReservationDetails.objects.filter(post=post).first()
         print(f"reservation_value: {reservation}")
-
-
         
         serializer = ReservationDetailSerializer(
             reservation,
@@ -289,11 +287,13 @@ class CustomerDetailsView(APIView):
             context={'user': user},
             partial=True
         )
+        print(serializer)
 
         if serializer.is_valid():
             updated_reservation = serializer.save()
             reference = str(uuid.uuid4())
             total_amount = updated_reservation.calculate_total_price()
+            print(total_amount)
 
             # Initiate payment
             flutterwave_url = f"{settings.FLW_API_URL}/payments"

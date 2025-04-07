@@ -104,12 +104,13 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
     customer_last_name = serializers.CharField(write_only=True)
     customer_email = serializers.EmailField(write_only=True)
     customer_phone_number = serializers.CharField(write_only=True)
+    total_price = serializers.SerializerMethodField()
     # days = serializers.CharField(read_only=True)
 
     class Meta:
         model = ReservationDetails
         fields = (
-            'first_name', 'last_name', 'phone_number', 'email',
+            'first_name', 'last_name', 'phone_number', 'email', 'total_price',
             'customer_first_name', 'customer_last_name', 'customer_email', 'customer_phone_number'
         )
     
@@ -117,7 +118,7 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
     #     print(f"obj: {obj}")
     #     """Retrieve the calculated total price."""
     #     return obj.calculate_total_price()    
-
+  
     def validate(self, data):
         """Ensure customer details match the logged-in user"""
         user = self.context.get('user')
@@ -153,15 +154,17 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
         print(f"validated_data: {validated_data}")
         print(f"instance: {instance}")
         print(f"instance.first_name1: {instance.first_name}")
-        instance.first_name = validated_data.get('first_name')
+        instance.first_name = validated_data.get('first_name', instance.first_name)
         print(f"instance.first_name2: {instance.first_name}")
-        instance.last_name = validated_data.get('last_name')
-        instance.phone_number = validated_data.get('phone_number')
-        instance.email = validated_data.get('email')
-        instance.check_in = validated_data.get('check_in')
-        instance.check_out = validated_data.get('check_out')
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.phone_number = validated_data.get('phone_number', instance.phone_number)
+        instance.email = validated_data.get('email', instance.email)
+        # instance.check_in = validated_data.get('check_in', )
+        # instance.check_out = validated_data.get('check_out')
         instance.save()  # ✅ Save changes
 
         return instance  # ✅ Return the updated instance
 
-   
+    def get_total_price(self, instance):
+        # Return the calculated total price from the model method.
+        return instance.calculate_total_price()
