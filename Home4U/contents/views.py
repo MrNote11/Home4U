@@ -203,7 +203,6 @@ class CreateGuests(APIView):
             # Save the reservation instance with the provided data and context.
             user= request.user
             reservation = serializer.save(post=post, user=user)
-            user = self.request.user
             total_price = reservation.calculate_total_price()
             
             # request.session['total_price'] = total_price
@@ -276,10 +275,14 @@ class CustomerDetailsView(APIView):
 
     def post(self, request, post_id):
         """Updates reservation and initiates payment"""
-        post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
+        #post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
         
-        reservation = ReservationDetails.objects.filter(post=post, user=user).first()
+        reservation = ReservationDetails.objects.filter(post=post_id, user=user).first()
+        reservation1 = get_object_or_404(Payment, reservation=reservation.id)
+        check = reservation1.total_amount
+        print(f"check: {check}")
+        
         print(f"reservation_value: {reservation}")
         
         serializer = ReservationDetailSerializer(
@@ -303,7 +306,7 @@ class CustomerDetailsView(APIView):
 
             payload = {
                 "tx_ref": reference,
-                "amount": float(total_amount),
+                "amount": float(check),
                 "currency": "NGN",
                 "redirect_url": f"{vercel_url}/payments/callback/",
                 "payment_type": "card",
