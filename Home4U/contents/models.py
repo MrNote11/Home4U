@@ -86,7 +86,7 @@ class ReservationDetails(models.Model):
 
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, null=True)
 
-    post = models.ForeignKey(ReservationContents, on_delete=models.CASCADE, null=True)
+    house = models.ForeignKey(ReservationContents, on_delete=models.CASCADE, null=True)
 
     first_name = models.CharField(max_length=30, null=True)
 
@@ -111,13 +111,12 @@ class ReservationDetails(models.Model):
     ]
 
     guests = models.IntegerField(choices=GUESTS, blank=True, null=True)
-
     check_in = models.DateField(blank=True, null=True)
-
     check_out = models.DateField(blank=True, null=True)
+    booking = models.BooleanField(default=False)
 
     def __str__(self):
-            return f"post: {self.post}, check_in: {self.check_in}, check_out; {self.check_out}"
+            return f"post: {self.house}, check_in: {self.check_in}, check_out; {self.check_out}"
     
     def calculate_total_price(self):
         """Calculate the total price based on months stayed and post price."""
@@ -125,7 +124,7 @@ class ReservationDetails(models.Model):
             print("Missing check-in or check-out date")
             return 0  # Return 0 instead of crashing
 
-        if not self.post or not self.post.price:
+        if not self.house or not self.house.price:
             print("Post or post price is missing")
             return 0  # Prevent NoneType error
 
@@ -136,11 +135,11 @@ class ReservationDetails(models.Model):
 
         # If remaining days exceed half a month, count it as a full month
         if remaining_days > 15:
-            num_months += 1
+            num_months += 2
 
         print(f"Number of months: {num_months}")
-        print(f"Post price: {self.post.price}")
-        total_price = num_months * self.post.price
+        print(f"Post price: {self.house.price}")
+        total_price = num_months * self.house.price
         print(f"Total price: {total_price}")
 
         return total_price

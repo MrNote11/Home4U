@@ -178,22 +178,10 @@ class CreateGuests(APIView):
     # serializer_class = GuestsSerializers
     permission_classes = [IsAuthenticated]
 
-    # def get_queryset(self):
-        
-        # post = get_object_or_404(ReservationContents, id=self.kwargs.get('post_pk'))
-       
-        # return ReservationDetails.objects.filter(post_id=post.id)
-    
-    # def get_serializer_context(self):
-    #     # Provide context to the serializer, including the logged-in user and the post ID.
-        
-    #     user = self.request.user
-    #     post_pk = self.kwargs.get('post_pk')
-    #     return {'user': user, 'post': int(post_pk)}
     
     def post(self, request, post_pk):
         user = request.user
-        post = get_object_or_404(ReservationContents, id=post_pk)
+        house = get_object_or_404(ReservationContents, id=post_pk)
         
         # Initialize the serializer with the incoming data.
         
@@ -202,55 +190,11 @@ class CreateGuests(APIView):
         if serializer.is_valid():
             # Save the reservation instance with the provided data and context.
             user= request.user
-            reservation = serializer.save(post=post, user=user)
+            reservation = serializer.save(house=house, user=user)
+            reservation.booking=True
+            reservation.save()
             total_price = reservation.calculate_total_price()
-            
-            # request.session['total_price'] = total_price
-            # request.session.save()
-            # total = request.session.get('total_price')
-            # print(total)
-            # If the calculated price is invalid, return an error.
-            
-            
-            # if total_price <= 0:
-            #     return Response({"error": "Invalid total price"}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Prepare the payment initiation parameters.
-            email = user.email
-            reference = str(uuid.uuid4())
-            flutterwave_url = f"{settings.FLW_API_URL}/payments"
-            secret_key = settings.FLW_SECRET_KEY
-            vercel_url = getattr(settings, "VERCEL_APP_URL", None)
-
-            payload = {
-                "tx_ref": reference,
-                "amount": float(total_price),
-                "currency": "NGN",
-                "redirect_url": f"{vercel_url}/payments/callback/",
-                "payment_type": "card",
-                "customer": {"email": email},
-            }
-
-            headers = {
-                "Authorization": f"Bearer {secret_key}",
-                "Content-Type": "application/json",
-            }
-
-            try:
-                # Create a Payment record linked to this reservation.
-                Payment.objects.create(
-                    user=user,
-                    reservation=reservation,
-                    total_amount=total_price,
-                    reference=reference,
-                    status="pending",
-                )
-                # Initiate the payment by sending a POST request to the payment API.
-                response = requests.post(flutterwave_url, json=payload, headers=headers)
-                response_data = response.json()
-
-                if response.status_code == 200 and response_data.get("status") == "success":
-                    return Response(
+            return Response(
                         {
                             "message": "Reservation and Payment initiated successfully.",
                             "reservation_details": serializer.data,
@@ -258,30 +202,19 @@ class CreateGuests(APIView):
                         },
                         status=status.HTTP_201_CREATED,
                     )
-                return Response({"error": "Failed to initiate payment"}, status=status.HTTP_400_BAD_REQUEST)
-
-            except requests.exceptions.RequestException:
-                return Response({"error": "Payment initiation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            except Exception as e:
-                return Response({"error": f"Database or unexpected error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        else:
-            # Return serializer errors if validation fails.
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Failed to initiate payment"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CustomerDetailsView(APIView):
+class CustomerDetailsHousingView(APIView):
     """Handles customer reservation and payment initiation"""
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, post_id):
+    def post(self, request, id):
         """Updates reservation and initiates payment"""
         #post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
         
-        reservation = ReservationDetails.objects.filter(post=post_id, user=user).first()
-        reservation1 = get_object_or_404(Payment, reservation=reservation.id)
-        check = reservation1.total_amount
-        print(f"check: {check}")
+        reservation = ReservationDetails.objects.filter(house=id, user=user).first()
         
         print(f"reservation_value: {reservation}")
         
@@ -300,13 +233,15 @@ class CustomerDetailsView(APIView):
             print(total_amount)
 
             # Initiate payment
+            email = user.email
+            reference = str(uuid.uuid4())
             flutterwave_url = f"{settings.FLW_API_URL}/payments"
             secret_key = settings.FLW_SECRET_KEY
             vercel_url = getattr(settings, "VERCEL_APP_URL", None)
 
             payload = {
                 "tx_ref": reference,
-                "amount": float(check),
+                "amount": float(total_amount),
                 "currency": "NGN",
                 "redirect_url": f"{vercel_url}/payments/callback/",
                 "payment_type": "card",
@@ -319,6 +254,15 @@ class CustomerDetailsView(APIView):
             }
 
             try:
+                 # Create a Payment record linked to this reservation.
+                payment=Payment.objects.create(
+                    user=user,
+                    reservation=reservation,
+                    total_amount=total_amount,
+                    reference=reference,
+                )
+                
+                payment.status=True
                 response = requests.post(flutterwave_url, json=payload, headers=headers)
                 response_data = response.json()
 

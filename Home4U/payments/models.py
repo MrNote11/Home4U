@@ -11,17 +11,8 @@ class Payment(models.Model):
     reservation = models.ForeignKey(ReservationDetails, on_delete=models.CASCADE) # ✅ Link to ReservationDetails
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     reference = models.CharField(max_length=255, unique=True)
-    status = models.CharField(
-    max_length=20,
-
-    choices=[("pending", "Pending"), ("successful", "Successful"), ("failed", "Failed")],
-
-    default="pending"
-
-    )
+    status = models.BooleanField(default=False)
     payload = models.JSONField(null=True, blank=True)
-    
-
     created_at = models.DateTimeField(auto_now_add=True)
 
 
