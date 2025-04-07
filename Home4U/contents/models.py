@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from dateutil.relativedelta import relativedelta
 from cloudinary.models import CloudinaryField
 from django_resized import ResizedImageField
+from django.utils import timezone
 
 class ReservationContents(models.Model):
 
@@ -114,7 +115,13 @@ class ReservationDetails(models.Model):
     check_in = models.DateField(blank=True, null=True)
     check_out = models.DateField(blank=True, null=True)
     booking = models.BooleanField(default=False)
-
+    created = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        ordering = ['created']
+        indexes = [
+            models.Index(fields=['-created'])
+        ]
     def __str__(self):
             return f"post: {self.user}, {self.house}, check_in: {self.check_in}, check_out; {self.check_out}"
     
