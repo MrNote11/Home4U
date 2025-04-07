@@ -278,7 +278,7 @@ class CustomerDetailsView(APIView):
         post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
         
-        reservation = ReservationDetails.objects.filter(post=post)
+        reservation = ReservationDetails.objects.filter(post=post).last()
         print(f"reservation_value: {reservation}")
 
         if not reservation:
