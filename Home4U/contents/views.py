@@ -281,8 +281,6 @@ class CustomerDetailsView(APIView):
         reservation = ReservationDetails.objects.filter(post=post).last()
         print(f"reservation_value: {reservation}")
 
-        if not reservation:
-            return Response({"error": "No reservation found for this post."}, status=400)
 
         
         serializer = ReservationDetailSerializer(
