@@ -192,7 +192,7 @@ class CreateGuests(APIView):
     #     return {'user': user, 'post': int(post_pk)}
     
     def post(self, request, post_pk):
-      
+        user = request.user
         post = get_object_or_404(ReservationContents, id=post_pk)
         
         # Initialize the serializer with the incoming data.
@@ -201,7 +201,8 @@ class CreateGuests(APIView):
         
         if serializer.is_valid():
             # Save the reservation instance with the provided data and context.
-            reservation = serializer.save(post=post)
+            user= request.user
+            reservation = serializer.save(post=post, user=user)
             user = self.request.user
             total_price = reservation.calculate_total_price()
             
@@ -278,7 +279,7 @@ class CustomerDetailsView(APIView):
         post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
         
-        reservation = ReservationDetails.objects.filter(post=post).first()
+        reservation = ReservationDetails.objects.filter(post=post, user=user).first()
         print(f"reservation_value: {reservation}")
         
         serializer = ReservationDetailSerializer(
