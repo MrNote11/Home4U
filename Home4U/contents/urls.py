@@ -3,14 +3,13 @@ from django.conf import settings
 from django.conf.urls.static import static
 from .views import (CreateGuests, ReservationRatingView, #likedpost,
                     LikePostView, UserLikedPostsView,
-                    UnlikePostView, HomeViews,
-                    #HomeViewdetails, 
+                    UnlikePostView, HomeViews, HomeDescriptions, 
                                      CustomerDetailsHousingView)
 
 
 urlpatterns = [
     path('', HomeViews.as_view(), name='home'),
-    # path('<int:pk>/', HomeViewdetails.as_view(), name='description'),
+    path('<int:pk>/', HomeDescriptions.as_view(), name='description'),
     path('<int:post_pk>/create/', CreateGuests.as_view(), name='create'),
     path('<int:pk>/like/', LikePostView.as_view(), name='house_like'),
     path('likedview/', UserLikedPostsView.as_view(), name='likedview'),

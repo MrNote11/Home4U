@@ -48,9 +48,9 @@ class HomeViews(generics.ListAPIView):
         homepage_filter = query_params.get('homepage')
 
         if homepage_filter == 'home':
-            reservation_id = query_params.get('id')
-            if reservation_id and reservation_id.isdigit():
-                return queryset.filter(id=int(reservation_id))
+            # reservation_id = query_params.get('id')
+            # if reservation_id and reservation_id.isdigit():
+            #     return queryset.filter(id=int(reservation_id))
             return queryset.order_by("created")
 
         elif homepage_filter == 'newly added':
@@ -61,6 +61,7 @@ class HomeViews(generics.ListAPIView):
             return queryset.filter(id__in=post_ids)
 
         return queryset.none()
+
 
 
     def list(self, request, *args, **kwargs):
@@ -78,6 +79,17 @@ class HomeViews(generics.ListAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+
+class HomeDescriptions(generics.RetrieveAPIView):
+     def get(self, request, pk):
+        house = get_object_or_404(ReservationContents, id=pk)
+        serializer = ReservationContentsSerializer(house)
+        
+        data={
+            'posts': serializer.data
+        }
+        
+        return Response(data)
 
 class ReservationRatingView(APIView):
     def post(self, request, post_pk, *args, **kwargs):
