@@ -44,8 +44,8 @@ ALLOWED_HOSTS = ['*', "2906-105-112-203-225.ngrok-free.app", "127.0.0.1",
 # load_dotenv()
 
 
-FLW_SECRET_KEY = 'FLWSECK_TEST-a0b16596e92027f1c7118a963915673b-X'
-FLW_PUBLIC_KEY = 'FLWPUBK_TEST-ff111af8ee22a7d400c79c13e520160d-X'
+FLW_SECRET_KEY = 'FLWSECK_TEST-be112cfcacb4bd6e592aa49b64d7b5b4-X'
+FLW_PUBLIC_KEY = 'FLWPUBK_TEST-a014eea4344fe9761cfe15b6f352fbbc-X'
 FLW_API_URL = "https://api.flutterwave.com/v3"
 # Application definition
 INSTALLED_APPS = [
@@ -93,7 +93,7 @@ SIMPLE_JWT = {
 if not FLW_SECRET_KEY:
     raise ValueError("FLW_SECRET_KEY is missing from .env")
 
-secret_key = os.environ.get("FLW_SECRET_KEY", "FLWSECK_TEST-a0b16596e92027f1c7118a963915673b-X")
+secret_key = os.environ.get("FLW_SECRET_KEY", "FLWSECK_TEST-be112cfcacb4bd6e592aa49b64d7b5b4-X")
 if not secret_key:
     raise ValueError("Error loading the FLW_SECRET_KEY from .env file")
     
