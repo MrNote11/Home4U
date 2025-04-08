@@ -263,6 +263,9 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': os.getenv('CLOUD_API_SECRET')
 }
 
+FLW_SECRET_HASH = os.getenv("FLW_SECRET_HASH")
+print(FLW_SECRET_HASH)
+
 cloudinary.config(
     cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
     api_key=CLOUDINARY_STORAGE['API_KEY'],

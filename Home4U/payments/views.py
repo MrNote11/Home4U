@@ -9,6 +9,7 @@ from .models import Payment
 from .utils import get_bank_code, resolve_account
 from django.shortcuts import get_object_or_404
 from .models import Payment, ReservationDetails
+from rest_framework.permissions import IsAuthenticated
 
 
 class BankTransferView(APIView):
@@ -121,59 +122,39 @@ class InitiatePayment(APIView):
             return Response({"error": f"Database or unexpected error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
 class PaymentCallback(APIView):
-    """Handles the payment callback from Flutterwave"""
+    """Handles the redirect callback from Flutterwave"""
 
     def get(self, request):
-        status_param = request.GET.get('status')
         tx_ref = request.GET.get('tx_ref')
-        
-        print(f"1:{tx_ref}")
-        # Construct the verification URL
+
         url = f"https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref={tx_ref}"
-        
-        print(f"2:{tx_ref}")
-        
         headers = {
             "Authorization": f"Bearer {settings.FLW_SECRET_KEY}",
-            
             "Content-Type": "application/json"
         }
-        
-        print(f"FLK{settings.FLW_SECRET_KEY}")
 
-        # Make request to Flutterwave
         response = requests.get(url, headers=headers)
-        print(f"3:{tx_ref}")
-        # **Fix: Check if the response is empty**
-        print(f"4:status {response}")
+
         if response.status_code != 200 or not response.text.strip():
-            return Response(
-                {"error": "Invalid response from Flutterwave"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-           
+            return Response({"error": "Invalid response from Flutterwave"}, status=400)
 
         try:
             response_data = response.json()
         except requests.exceptions.JSONDecodeError:
-            return Response(
-                {"error": "Failed to decode Flutterwave response"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": "Failed to decode Flutterwave response"}, status=500)
 
-        # Process payment
-        
-        print(f"5{response_data}")
         if response_data['data']['status'] == "successful":
             try:
                 payment = Payment.objects.get(reference=tx_ref)
-                print(f"payment: {payment}")
-                payment.status = "successful"
+                payment.status = Payment.Status.SUCCESSFUL
                 payment.save()
-                return Response({"message": "Payment was successful"}, status=status.HTTP_200_OK)
+                return Response({"message": "Payment was successful"}, status=200)
             except Payment.DoesNotExist:
-                return Response({"error": "Payment not found"}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"error": "Payment not found"}, status=404)
 
-        return Response({"error": "Payment failed"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Payment failed"}, status=400)
+
+    
+class PaymentCallback(APIView):
+    pass  

@@ -226,7 +226,7 @@ class CustomerDetailsHousingView(APIView):
         #post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
         
-        reservation = ReservationDetails.objects.filter(house=id, user=user).last()
+        reservation = ReservationDetails.objects.filter(house=id, user=user)
         
         print(f"reservation_value: {reservation}")
         
@@ -255,7 +255,7 @@ class CustomerDetailsHousingView(APIView):
                 "tx_ref": reference,
                 "amount": float(total_amount),
                 "currency": "NGN",
-                "redirect_url": f"{vercel_url}/payments/confirmation/",
+                "redirect_url": f"{vercel_url}/confirmation/",
                 "payment_type": "card",
                 "customer": {"email": user.email},
             }
@@ -270,6 +270,13 @@ class CustomerDetailsHousingView(APIView):
                 response_data = response.json()
 
                 if response.status_code == 200 and response_data.get("status") == "success":
+                    payment=Payment.objects.create(
+                        user=user,
+                        reservation=reservation,
+                        reference=reference,
+                        total_amount=total_amount
+                    )
+                    payment.Status.PENDING
                     return Response({
                         "message": "Reservation updated and payment initiated successfully!",
                         "customer_id": updated_reservation.id,
