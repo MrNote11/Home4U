@@ -229,7 +229,7 @@ class CustomerDetailsHousingView(APIView):
         #post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
         
-        reservation = ReservationDetails.objects.filter(house=id, user=user).last()
+        reservation = ReservationDetails.objects.filter(house=id, user=user).last
         
         print(f"reservation_value: {reservation}")
         

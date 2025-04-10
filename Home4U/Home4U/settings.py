@@ -15,8 +15,6 @@ from pathlib import Path
 import dj_database_url
 import os
 import cloudinary
-import cloudinary.uploader
-import cloudinary.api
 from dotenv import load_dotenv
 load_dotenv()
 #from dotenv import load_dotenv
@@ -55,8 +53,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'cloudinary',
-    'cloudinary_storage',
     'django.contrib.staticfiles',
+    'cloudinary_storage',
     #custom apps
     'accounts',
     'payments',
