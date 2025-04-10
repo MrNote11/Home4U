@@ -1,3 +1,5 @@
+from asyncio import log
+from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -10,8 +12,10 @@ from .utils import get_bank_code, resolve_account
 from django.shortcuts import get_object_or_404
 from .models import Payment, ReservationDetails
 from rest_framework.permissions import IsAuthenticated
-
-
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+import json
 class BankTransferView(APIView):
     def post(self, request):
         """Handles bank transfers using Flutterwave"""
@@ -156,5 +160,56 @@ class PaymentCallback(APIView):
         return Response({"error": "Payment failed"}, status=400)
 
     
-class PaymentCallback(APIView):
-    pass  
+
+@method_decorator(csrf_exempt, name='dispatch')
+class WebhookCallback(APIView):
+    """
+    Handles Flutterwave Webhook Events (validated)
+    """
+
+    def post(self, request):
+        # ✅ Get raw payload
+        payload = request.body
+
+        # ✅ Get Flutterwave signature and compare with your secret hash
+        signature = request.headers.get('verif-hash')
+        secret_hash = settings.FLW_SECRET_HASH
+
+        if not signature or signature != secret_hash:
+            return HttpResponse("Invalid signature", status=401)
+
+        # ✅ Try parsing the incoming JSON payload
+        try:
+            event = json.loads(payload)
+        except ValueError:
+            return HttpResponse("Invalid JSON", status=400)
+
+        # ✅ Extract data
+        data = event.get('data', {})
+        tx_ref = data.get('tx_ref')  # 🛠️ Fixed here: get from parsed data, not request
+        payment_status = data.get('status')
+
+        # ✅ Check if payment is successful
+        if payment_status == 'successful':
+            # 🔍 Optional: re-verify with Flutterwave
+            verify_url = f"https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref={tx_ref}"
+            headers = {
+                "Authorization": f"Bearer {settings.FLW_SECRET_KEY}",
+                "Content-Type": "application/json",
+            }
+
+            response = requests.get(verify_url, headers=headers)
+            if response.status_code == 200:
+                verify_data = response.json()
+                payment_data = verify_data.get('data', {})
+
+                if payment_data.get('status') == 'successful':
+                    try:
+                        payment = Payment.objects.get(reference=tx_ref)
+                        payment.status = Payment.Status.SUCCESSFUL
+                        payment.save()
+                        return HttpResponse("Payment processed", status=200)
+                    except Payment.DoesNotExist:
+                        return HttpResponse("Payment not found", status=404)
+
+        return HttpResponse("Webhook received", status=200)

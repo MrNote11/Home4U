@@ -92,6 +92,7 @@ class HomeDescriptions(generics.RetrieveAPIView):
         return Response(data)
 
 class ReservationRatingView(APIView):
+    serializer_class = ReservationContentsSerializer
     def post(self, request, post_pk, *args, **kwargs):
         rating = request.data.get("ratings")
         user = request.user
@@ -127,7 +128,7 @@ class ReservationRatingView(APIView):
 
 class LikePostView(APIView):
     permission_classes = [IsAuthenticated]
-
+    
     def post(self, request, pk):
         try:
             reservation = ReservationContents.objects.get(pk=pk)
@@ -189,6 +190,7 @@ new_post = NewHousingContentsViewList.as_view()
 class CreateGuests(APIView):
     # serializer_class = GuestsSerializers
     permission_classes = [IsAuthenticated]
+    serializer_class = GuestsSerializers
 
     
     def post(self, request, post_pk):
@@ -220,6 +222,7 @@ class CreateGuests(APIView):
 class CustomerDetailsHousingView(APIView):
     """Handles customer reservation and payment initiation"""
     permission_classes = [IsAuthenticated]
+    serializer_class = ReservationDetailSerializer
 
     def post(self, request, id):
         """Updates reservation and initiates payment"""

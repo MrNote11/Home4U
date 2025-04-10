@@ -24,14 +24,40 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView
 )
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view as swagger_get_scheme_view
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+
+schema_view = swagger_get_scheme_view(
+    openapi.Info(
+        title="Home4U Reservation API",
+        default_version='1.21.8',
+        description="API documentation of Home4U"
+    ),
+    public=True
+)
+
+
+urlpatterns = [
+    # YOUR PATTERNS
+   
+]
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('reservation/', include('contents.urls')),
     path('', include('accounts.urls')),
     path('payments/', include('payments.urls')),
-    path('token/', TokenObtainPairView.as_view(), name='token_obtain'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh')
+    # path('token/', TokenObtainPairView.as_view(), name='token_obtain'),
+    # path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    # Optional UI:
+    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    # path('api/v1/', 
+    #      include([
+    #          path('swagger_ui/schema/', schema_view.with_ui('swagger', cache_timeout=0), name="swagger-schema")
+    #      ]))
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

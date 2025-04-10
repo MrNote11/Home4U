@@ -1,0 +1,690 @@
+openapi: 3.0.3
+info:
+  title: Your Project API
+  version: 1.0.0
+  description: Your project description
+paths:
+  /login/:
+    post:
+      operationId: login_create
+      tags:
+      - login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Login'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Login'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Login'
+          description: ''
+  /logout/:
+    post:
+      operationId: logout_create
+      tags:
+      - logout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Logout'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Logout'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Logout'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Logout'
+          description: ''
+  /payments/confirmation/:
+    get:
+      operationId: payments_confirmation_retrieve
+      description: Handles the redirect callback from Flutterwave
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /payments/initiate-payment/{reservation_id}/:
+    post:
+      operationId: payments_initiate_payment_create
+      description: Process payment for a specific reservation
+      parameters:
+      - in: path
+        name: reservation_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /payments/webhook/flutterwave/:
+    post:
+      operationId: payments_webhook_flutterwave_create
+      description: Handles Flutterwave Webhook Events (validated)
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /reservation/:
+    get:
+      operationId: reservation_list
+      parameters:
+      - in: query
+        name: house__icontains
+        schema:
+          type: string
+      - in: query
+        name: house__iexact
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: state__icontains
+        schema:
+          type: string
+      - in: query
+        name: state__iexact
+        schema:
+          type: string
+      tags:
+      - reservation
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReservationContentsList'
+          description: ''
+  /reservation/{id}/customer_input/:
+    post:
+      operationId: reservation_customer_input_create
+      description: Updates reservation and initiates payment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - reservation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationDetail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReservationDetail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReservationDetail'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationDetail'
+          description: ''
+  /reservation/{id}/:
+    get:
+      operationId: reservation_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - reservation
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /reservation/{id}/delete/:
+    delete:
+      operationId: reservation_delete_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - reservation
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /reservation/{id}/like/:
+    post:
+      operationId: reservation_like_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - reservation
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /reservation/{post_pk}/create/:
+    post:
+      operationId: reservation_create_create
+      parameters:
+      - in: path
+        name: post_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - reservation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestsSerializers'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GuestsSerializers'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GuestsSerializers'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestsSerializers'
+          description: ''
+  /reservation/{post_pk}/ratings/:
+    post:
+      operationId: reservation_ratings_create
+      parameters:
+      - in: path
+        name: post_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - reservation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationContents'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReservationContents'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReservationContents'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationContents'
+          description: ''
+  /reservation/likedview/:
+    get:
+      operationId: reservation_likedview_list
+      tags:
+      - reservation
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PostLike'
+          description: ''
+  /signup/:
+    post:
+      operationId: signup_create
+      tags:
+      - signup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserSerializers'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserSerializers'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserSerializers'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSerializers'
+          description: ''
+  /update-profile/:
+    patch:
+      operationId: update_profile_partial_update
+      tags:
+      - update-profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateSerializers'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateSerializers'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateSerializers'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateSerializers'
+          description: ''
+  /verify-otp/{uidb64}/{token}/:
+    get:
+      operationId: verify_otp_retrieve
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: uidb64
+        schema:
+          type: string
+        required: true
+      tags:
+      - verify-otp
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    BedsEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 11
+      type: integer
+      description: |-
+        * `1` - 1 Bed
+        * `2` - 2 Beds
+        * `3` - 3 Beds
+        * `4` - 4 Beds
+        * `5` - 5 Beds
+        * `11` - 11 Beds
+    GuestsEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      type: integer
+      description: |-
+        * `1` - 1 Guest
+        * `2` - 2 Guests
+        * `3` - 3 Guests
+        * `4` - 4 Guests
+        * `5` - 5 Guests
+    GuestsSerializers:
+      type: object
+      properties:
+        check_in:
+          type: string
+          format: date
+          nullable: true
+        check_out:
+          type: string
+          format: date
+          nullable: true
+        guests:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/GuestsEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        total_price:
+          type: string
+          readOnly: true
+      required:
+      - total_price
+    Login:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - password
+      - username
+    Logout:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+      required:
+      - refresh_token
+    NullEnum:
+      enum:
+      - null
+    PaginatedReservationContentsList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page_size=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page_size=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationContents'
+    PatchedUpdateSerializers:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        profile_image:
+          type: string
+          format: uri
+    PostLike:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        post:
+          $ref: '#/components/schemas/ReservationContents'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - post
+    ReservationContents:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        house:
+          type: string
+          maxLength: 50
+        beds:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/BedsEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        address:
+          type: string
+          maxLength: 50
+        state:
+          type: string
+          maxLength: 100
+        swimmingpool:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SwimmingpoolEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        wifi:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/WifiEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        ratings_reviews:
+          type: string
+          readOnly: true
+        country:
+          type: string
+          maxLength: 50
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationImages'
+        average_rating:
+          type: number
+          format: double
+          readOnly: true
+        likes_count:
+          type: string
+          readOnly: true
+        description:
+          type: string
+        status:
+          type: string
+          maxLength: 50
+      required:
+      - average_rating
+      - house
+      - id
+      - images
+      - likes_count
+      - ratings_reviews
+    ReservationDetail:
+      type: object
+      description: Handles reservation details and ensures user validation
+      properties:
+        first_name:
+          type: string
+          nullable: true
+          maxLength: 30
+        last_name:
+          type: string
+          nullable: true
+          maxLength: 30
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 30
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        total_price:
+          type: string
+          readOnly: true
+        customer_first_name:
+          type: string
+          writeOnly: true
+        customer_last_name:
+          type: string
+          writeOnly: true
+        customer_email:
+          type: string
+          format: email
+          writeOnly: true
+        customer_phone_number:
+          type: string
+          writeOnly: true
+      required:
+      - customer_email
+      - customer_first_name
+      - customer_last_name
+      - customer_phone_number
+      - total_price
+    ReservationImages:
+      type: object
+      properties:
+        image_url:
+          type: string
+          format: uri
+    SwimmingpoolEnum:
+      enum:
+      - true
+      - false
+      type: boolean
+      description: |-
+        * `True` - Yes
+        * `False` - No
+    UpdateSerializers:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        profile_image:
+          type: string
+          format: uri
+    UserSerializers:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        password:
+          type: string
+          writeOnly: true
+        confirm_password:
+          type: string
+          writeOnly: true
+      required:
+      - confirm_password
+      - password
+      - username
+    WifiEnum:
+      enum:
+      - true
+      - false
+      type: boolean
+      description: |-
+        * `True` - Wifi Available
+        * `False` - Wifi Not Available
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

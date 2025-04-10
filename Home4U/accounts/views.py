@@ -29,6 +29,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class UserRegister(APIView):
+    serializer_class = UserSerializers
     def post(self, request):
         serializer = UserSerializers(data=request.data, context={'request': request})
 
@@ -112,7 +113,8 @@ class VerifyOTPView(APIView):
         except (User.DoesNotExist, VerificationToken.DoesNotExist, ValueError):
             return Response({"message": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
-class LoginView(views.APIView):
+class LoginView(APIView):
+    serializer_class = LoginSerializer
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
@@ -144,6 +146,7 @@ class LoginView(views.APIView):
 
 
 class UpdateView(APIView):
+    serializer_class = UpdateSerializers
     permission_classes = [IsAuthenticated]
 
     def patch(self, request):
@@ -225,6 +228,7 @@ class ResetPasswordView(generics.CreateAPIView):
 
 
 class LogoutView(APIView):
+    serializer_class = LogoutSerializer
     def post(self, request):
         serializer = LogoutSerializer(data=request.data)
         if serializer.is_valid():
