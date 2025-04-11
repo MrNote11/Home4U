@@ -91,6 +91,8 @@ class HomeDescriptions(generics.RetrieveAPIView):
         
         return Response(data)
 
+
+
 class ReservationRatingView(APIView):
     serializer_class = ReservationContentsSerializer
     def post(self, request, post_pk, *args, **kwargs):
@@ -187,37 +189,39 @@ class NewHousingContentsViewList(generics.ListAPIView):
 new_post = NewHousingContentsViewList.as_view()
 
 
+
+
 class CreateGuests(APIView):
-    # serializer_class = GuestsSerializers
     permission_classes = [IsAuthenticated]
     serializer_class = GuestsSerializers
-
     
     def post(self, request, post_pk):
         user = request.user
         house = get_object_or_404(ReservationContents, id=post_pk)
         
-        # Initialize the serializer with the incoming data.
-        
-        serializer = GuestsSerializers(data=request.data)
+        # Initialize the serializer with the incoming data
+        serializer = self.serializer_class(data=request.data)
         
         if serializer.is_valid():
-            # Save the reservation instance with the provided data and context.
-            user= request.user
+            # Save the reservation instance with the provided data
             reservation = serializer.save(house=house, user=user)
-            reservation.booking=True
+            reservation.booking = True
             reservation.save()
+            
+            # Calculate the total price after saving
             total_price = reservation.calculate_total_price()
+            
             return Response(
-                        {
-                            "message": "Reservation and Payment initiated successfully.",
-                            "reservation_details": serializer.data,
-                            "payment": total_price
-                        },
-                        status=status.HTTP_201_CREATED,
-                    )
-        return Response({"error": "Failed to initiate payment"}, status=status.HTTP_400_BAD_REQUEST)
-
+                {
+                    "message": "Reservation and Payment initiated successfully.",
+                    "reservation_details": serializer.data,
+                    "payment": total_price
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+    
 
 class CustomerDetailsHousingView(APIView):
     """Handles customer reservation and payment initiation"""
@@ -260,7 +264,8 @@ class CustomerDetailsHousingView(APIView):
                 "currency": "NGN",
                 "redirect_url": f"{vercel_url}/confirmation/",
                 "payment_type": "card",
-                "customer": {"email": user.email},
+                "email":user.email,
+                "customer": user
             }
 
             headers = {

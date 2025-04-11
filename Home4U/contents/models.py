@@ -124,7 +124,7 @@ class ReservationDetails(models.Model):
         ]
     def __str__(self):
             return f"post: {self.user}, {self.house}, check_in: {self.check_in}, check_out; {self.check_out}"
-    
+        
     def calculate_total_price(self):
         """Calculate the total price based on months stayed and post price."""
         if not self.check_in or not self.check_out:
@@ -134,22 +134,48 @@ class ReservationDetails(models.Model):
         if not self.house or not self.house.price:
             print("Post or post price is missing")
             return 0  # Prevent NoneType error
-
+        
+        # Monthly rate
+        monthly_rate = self.house.price
+        
+        # Calculate daily rate as a fraction of monthly rate (approximately 1/30 of monthly rate)
+        daily_rate = monthly_rate / 30
+        
         print(f"Check-in: {self.check_in}, Check-out: {self.check_out}")
+        
+        # Calculate full months
         delta = relativedelta(self.check_out, self.check_in)
         num_months = delta.years * 12 + delta.months
-        remaining_days = (self.check_out - self.check_in).days - (num_months * 30)
-
-        # If remaining days exceed half a month, count it as a full month
-        if remaining_days > 15:
-            num_months += 2
-
+        
+        # Calculate remaining days beyond full months
+        # First calculate exact days between dates
+        total_days = (self.check_out - self.check_in).days
+        # Then subtract the days accounted for by full months
+        remaining_days = total_days - (num_months * 30)
+        
+        # Calculate price for full months
+        months_price = num_months * monthly_rate
+        
+        # Calculate price for remaining days
+        days_price = remaining_days * daily_rate
+        
+        # Add booking fee
+        booking_fee = 50
+        
+        # Calculate total price
+        total_price = months_price + days_price + booking_fee
+        
         print(f"Number of months: {num_months}")
-        print(f"Post price: {self.house.price}")
-        total_price = num_months * self.house.price + 50
-        print(f"Total price: {total_price}")
-
-        return total_price
+        print(f"Remaining days: {remaining_days}")
+        print(f"Monthly rate: {monthly_rate}")
+        print(f"Daily rate: {daily_rate:.2f}")
+        print(f"Price for full months: {months_price}")
+        print(f"Price for remaining days: {days_price:.2f}")
+        print(f"Booking fee: {booking_fee}")
+        print(f"Total price: {total_price:.2f}")
+        
+        # Return as integer to avoid floating point issues
+        return round(total_price)
 
         
 class ReservationImages(models.Model):

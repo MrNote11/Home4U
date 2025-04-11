@@ -160,7 +160,9 @@ class PaymentCallback(APIView):
                 email = user.email
                 check_in = payment.reservations.check_in
                 check_out = payment.reservations.check_out
+                guest = payment.reservations.guests
                 house = payment.housenames.house
+                booking = tx_ref
                 print(f'tx_ref: {tx_ref}')
                 
                 print(f"email: {email}")
@@ -174,7 +176,7 @@ class PaymentCallback(APIView):
                                  "check_in":check_in,
                                  "check_out":check_out,
                                  "house":house,
-                                 "booking":payment}, status=200)
+                                 "booking":booking}, status=200)
                 
             except Payment.DoesNotExist:
                 return Response({"error": "Payment not found"}, status=404)

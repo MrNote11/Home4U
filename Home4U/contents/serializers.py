@@ -1,3 +1,4 @@
+from datetime import timedelta
 from rest_framework import serializers
 from .models import (ReservationContents, ReservationImages,
                      PostRating, ReservationDetails,
@@ -82,18 +83,56 @@ class GuestsSerializers(serializers.ModelSerializer):
             raise serializers.ValidationError("Check-out date must be in the future.")
         return value
 
-    def validate(self, attrs):
-        # Object-level validation to ensure check-out is after check-in.
-        check_in = attrs.get('check_in')
-        check_out = attrs.get('check_out')
-        if check_in and check_out and check_out <= check_in:
+    def validate(self, data):
+        """Combined validation for check-in/check-out relationship and minimum stay."""
+        check_in = data.get('check_in')
+        check_out = data.get('check_out')
+        
+        # Ensure both dates exist
+        if not check_in or not check_out:
+            raise serializers.ValidationError("Both check-in and check-out dates are required.")
+        
+        # Ensure check-out is after check-in
+        if check_out <= check_in:
             raise serializers.ValidationError("Check-out must be after check-in.")
-        return attrs
+        
+        # Calculate if dates are at least a month apart
+        delta = relativedelta(check_out, check_in)
+        total_months = delta.years * 12 + delta.months
+        days_difference = (check_out - check_in).days
+        
+        # Check if at least a month apart (either month count >= 1 or days >= 30)
+        if total_months < 1 and days_difference < 30:
+            raise serializers.ValidationError("Booking must be for at least one month.")
+        
+        # Add calculated fields
+        data['check_in_plus_15'] = check_in + timedelta(days=15)
+        data['check_out_plus_15'] = check_out + timedelta(days=15)
+        data['total_days'] = days_difference
+        
+        return data
 
     def get_total_price(self, obj):
         # Return the calculated total price from the model method.
         return obj.calculate_total_price()
-
+        
+    def create(self, validated_data):
+        # Extract calculated fields before creating the instance
+        validated_data.pop('check_in_plus_15', None)
+        validated_data.pop('check_out_plus_15', None)
+        validated_data.pop('total_days', None)
+        
+        # Create the reservation with the remaining data
+        instance = super().create(validated_data)
+        
+        # If you want to store the calculated fields on the model
+        # you can do so here (if they exist as model fields)
+        # instance.check_in_plus_15 = check_in_plus_15
+        # instance.check_out_plus_15 = check_out_plus_15
+        # instance.total_days = total_days
+        # instance.save()
+        
+        return instance
 
 
     
