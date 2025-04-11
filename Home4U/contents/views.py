@@ -264,8 +264,9 @@ class CustomerDetailsHousingView(APIView):
                 "currency": "NGN",
                 "redirect_url": f"{vercel_url}/confirmation/",
                 "payment_type": "card",
-                "email":user.email,
-                "customer": user
+                
+                "customer": {"email": user.email,
+                             "username":user.first_name},
             }
 
             headers = {
