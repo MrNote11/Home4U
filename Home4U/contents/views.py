@@ -228,8 +228,8 @@ class CustomerDetailsHousingView(APIView):
         """Updates reservation and initiates payment"""
         #post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
-        
-        reservation = ReservationDetails.objects.filter(house=id, user=user).last()
+        house = ReservationContents.objects.get(id=id)
+        reservation = ReservationDetails.objects.filter(house=house, user=user).last()
         
         print(f"reservation_value: {reservation}")
         
@@ -277,7 +277,8 @@ class CustomerDetailsHousingView(APIView):
                         user=user,
                         reservation=reservation,
                         reference=reference,
-                        total_amount=total_amount
+                        total_amount=total_amount,
+                        house = house
                     )
                     payment.Status.PENDING
                     return Response({

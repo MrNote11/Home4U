@@ -18,6 +18,7 @@ class UserSerializers(serializers.ModelSerializer):
         model = User
         fields = ['first_name', 'last_name', 'email', 'username', 'password', 'confirm_password']
 
+
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("Email already exists.")
@@ -31,20 +32,24 @@ class UserSerializers(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid phone number format.")
         return value
     
+    
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Username already exists.")
         return value
+
 
     def validate(self, data):
         if data.get('password') != data.get('confirm_password'):
             raise serializers.ValidationError("Passwords do not match.")
         return data
 
+
     def create(self, validated_data):
         validated_data.pop('confirm_password', None)  
         user = User.objects.create_user(**validated_data)  
         return user  #
+
 
 
 class LoginSerializer(serializers.Serializer):
@@ -56,13 +61,12 @@ class LoginSerializer(serializers.Serializer):
         password = data.get("password")
         user = authenticate(username=username, password=password)
         if user is None:
-            user = authenticate(email=username, password=password)
-        if user is None:
             raise serializers.ValidationError("Invalid username or password.")
         return {'user': user}
 
 class OTPVerificationSerializers(serializers.Serializer):
     otp = serializers.CharField(max_length=6)
+
 
 class UpdateSerializers(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', required=False)

@@ -27,7 +27,6 @@ from django.contrib.auth import get_user_model
 
 
 User = get_user_model()
-
 class UserRegister(APIView):
     serializer_class = UserSerializers
     def post(self, request):
@@ -122,15 +121,11 @@ class LoginView(APIView):
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
 
-            # Check if the user has a profile and save it
             try:
                 user_profile = user.userprofile
                 profile_image = request.build_absolute_uri(user_profile.profile_image.url) if user_profile.profile_image else None
             except UserProfile.DoesNotExist:
                 profile_image = None
-
-            # if user_profile:
-            #     user_profile.save()
 
             return Response({
                 'refresh': str(refresh),
@@ -140,7 +135,6 @@ class LoginView(APIView):
                     'profile_image': request.build_absolute_uri(profile_image) if profile_image else None,
                 }
             }, status=status.HTTP_200_OK)
-        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

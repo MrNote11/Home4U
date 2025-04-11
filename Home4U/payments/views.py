@@ -153,7 +153,29 @@ class PaymentCallback(APIView):
                 payment = Payment.objects.get(reference=tx_ref)
                 payment.status = Payment.Status.SUCCESSFUL
                 payment.save()
-                return Response({"message": "Payment was successful"}, status=200)
+                total = payment.total_amount
+                user = payment.user
+                first_name = user.first_name
+                last_name = user.last_name
+                email = user.email
+                check_in = payment.reservations.check_in
+                check_out = payment.reservations.check_out
+                house = payment.housenames.house
+                print(f'tx_ref: {tx_ref}')
+                
+                print(f"email: {email}")
+                full_name = f"{first_name} {last_name}"
+                print(f"fullname: {full_name}")
+                
+                return Response({"message": "Payment was successful",
+                                 "name": full_name,
+                                 "email": email,
+                                 "total":total,
+                                 "check_in":check_in,
+                                 "check_out":check_out,
+                                 "house":house,
+                                 "booking":payment}, status=200)
+                
             except Payment.DoesNotExist:
                 return Response({"error": "Payment not found"}, status=404)
 

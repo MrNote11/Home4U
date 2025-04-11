@@ -87,7 +87,7 @@ class ReservationDetails(models.Model):
 
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, null=True)
 
-    house = models.ForeignKey(ReservationContents, on_delete=models.CASCADE, null=True)
+    house = models.ForeignKey(ReservationContents, on_delete=models.CASCADE, null=True, related_name='houses')
 
     first_name = models.CharField(max_length=30, null=True)
 
