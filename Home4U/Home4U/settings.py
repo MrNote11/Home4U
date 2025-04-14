@@ -90,6 +90,7 @@ SPECTACULAR_SETTINGS = {
     # OTHER SETTINGS
 }
 
+
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=150),  # Fix
@@ -170,6 +171,7 @@ TEMPLATES = [
     },
 ]
 
+
 WSGI_APPLICATION = 'Home4U.wsgi.application'
 
 
@@ -186,10 +188,16 @@ if not database_url:
     raise ValueError("DATABASE_URL is not set. Please check your environment variables.")
 
 
-if ENVIRONMENT_VARIABLE and POSTGRESS == True:
-     DATABASES ={
-        "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
-                }
+try:
+
+    if ENVIRONMENT_VARIABLE and POSTGRESS == True:
+        DATABASES ={
+            "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
+                    }
+        
+except Exception as e:
+    print(f"This is the issue: {e}")
+    
 else:
     DATABASES = {
             'default': {
@@ -201,6 +209,8 @@ else:
                 'PORT': '5432'
             }
         }
+    
+            
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
@@ -284,7 +294,6 @@ cloudinary.config(
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database for sessions
 SESSION_COOKIE_NAME = 'mysessionid'  # Custom session name
 SESSION_COOKIE_AGE = 86400  # 1 day

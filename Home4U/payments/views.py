@@ -174,6 +174,7 @@ class PaymentCallback(APIView):
                                  "email": email,
                                  "total":total,
                                  "check_in":check_in,
+                                 "guest":guest,
                                  "check_out":check_out,
                                  "house":house,
                                  "booking":booking}, status=200)
