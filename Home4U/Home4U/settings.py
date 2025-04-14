@@ -188,16 +188,12 @@ if not database_url:
     raise ValueError("DATABASE_URL is not set. Please check your environment variables.")
 
 
-try:
 
-    if ENVIRONMENT_VARIABLE and POSTGRESS == True:
-        DATABASES ={
-            "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
-                    }
-        
-except Exception as e:
-    print(f"This is the issue: {e}")
-    
+if ENVIRONMENT_VARIABLE and POSTGRESS == True:
+     DATABASES ={
+        "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
+                }
+
 else:
     DATABASES = {
             'default': {
@@ -206,10 +202,12 @@ else:
                 'USER': 'postgres',
                 'PASSWORD': 'MrNote11',
                 'HOST': 'localhost',
-                'PORT': '5432'
-            }
+                'PORT': '5432',
+                'OPTIONS': {
+                    'sslmode': 'require'  # ⚠️ This line is essential
+                }
         }
-    
+    }
             
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
