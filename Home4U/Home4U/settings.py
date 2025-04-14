@@ -193,6 +193,16 @@ if ENVIRONMENT_VARIABLE and POSTGRESS == True:
      DATABASES ={
         "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
                 }
+     
+    #  DATABASES = {
+    #  'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
+    #     }
+     
+    #  DATABASES = {
+    # 'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
+    #         }
+     
+
 
 else:
     DATABASES = {
@@ -202,12 +212,16 @@ else:
                 'USER': 'postgres',
                 'PASSWORD': 'MrNote11',
                 'HOST': 'localhost',
-                'PORT': '5432',
-                'OPTIONS': {
-                    'sslmode': 'require'  # ⚠️ This line is essential
-                }
+                'PORT': '5432'
+                
+            }
         }
-    }
+    
+if 'default' in DATABASES and DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql_psycopg2':
+    DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
+     
+INTERNAL_IPS = ('127.0.0.1', 'localhost:8000')
+    
             
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases

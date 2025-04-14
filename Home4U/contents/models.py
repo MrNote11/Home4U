@@ -117,11 +117,6 @@ class ReservationDetails(models.Model):
     booking = models.BooleanField(default=False)
     created = models.DateTimeField(default=timezone.now)
     
-    class Meta:
-        ordering = ['created']
-        indexes = [
-            models.Index(fields=['-created'])
-        ]
     def __str__(self):
             return f"post: {self.user}, {self.house}, check_in: {self.check_in}, check_out; {self.check_out}"
         
