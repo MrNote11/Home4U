@@ -188,6 +188,8 @@ class LoginView(APIView):
                 'access': str(access_token),
                 'data': {
                     'username': user.username,
+                    'first_name':user.first_name,
+                    'last_name':user.last_name,
                     'profile_image': request.build_absolute_uri(profile_image) if profile_image else None,
                 }
             }, status=status.HTTP_200_OK)

@@ -58,6 +58,43 @@ class PostLikeSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostLike
         fields = ['id', 'post', 'created_at']
+        
+        
+
+
+class PostRatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostRating
+        fields = ['ratings']
+
+    def validate_ratings(self, value):
+        """Check that the rating is between 1 and 5."""
+        if value < 1 or value > 5:
+            raise serializers.ValidationError("Rating must be between 1 and 5.")
+        return value
+        
+        
+# class PostRatingSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = PostRating
+#         fields = ['id', 'post', 'user', 'ratings', 'created']
+#         read_only_fields = ['created', 'user']
+    
+#     def validate_ratings(self, value):
+#         """
+#         Check that the rating is between 1 and 5.
+#         """
+#         if value is not None and (value < 1 or value > 5):
+#             raise serializers.ValidationError("Rating must be between 1 and 5.")
+#         return value
+    
+#     def create(self, validated_data):
+#         """
+#         Set the user to the current request user
+#         """
+#         user = self.context['request'].user
+#         validated_data['user'] = user
+#         return super().create(validated_data)        
 
 class GuestsSerializers(serializers.ModelSerializer):
     total_price = serializers.SerializerMethodField()

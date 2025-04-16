@@ -6,7 +6,7 @@ from rest_framework import filters
 from rest_framework.views import APIView
 from .serializers import (ReservationContentsSerializer, GuestsSerializers, 
                           ReservationDetailSerializer,
-                          PostLikeSerializer
+                          PostLikeSerializer, PostRatingSerializer
                           )
 from .paginations import Limits
 from django_filters.rest_framework import DjangoFilterBackend
@@ -41,8 +41,8 @@ class HomeViews(generics.ListAPIView):
             total_likes=Count('post_likes')
         )
 
-        global_avg = PostRating.objects.aggregate(global_avg=Avg('ratings'))['global_avg']
-        self.global_avg_rating = round(global_avg, 1) if global_avg else 0  # ✅ Round Python-level
+        # global_avg = PostRating.objects.aggregate(global_avg=Avg('ratings'))['global_avg']
+        # self.global_avg_rating = round(global_avg, 1) if global_avg else 0  # ✅ Round Python-level
 
         query_params = self.request.query_params
         homepage_filter = query_params.get('homepage')
@@ -92,38 +92,96 @@ class HomeDescriptions(generics.RetrieveAPIView):
         return Response(data)
 
 
-
 class ReservationRatingView(APIView):
-    serializer_class = ReservationContentsSerializer
+    permission_classes = [IsAuthenticated]
     def post(self, request, post_pk, *args, **kwargs):
-        rating = request.data.get("ratings")
         user = request.user
+        # Get the apartment
+        apartment = get_object_or_404(ReservationContents, pk=post_pk)
 
-        if not user:
-            return Response({"error": "User cannot be None"}, status=status.HTTP_400_BAD_REQUEST)
+        # Check if user has booked the apartment
+        if not ReservationDetails.objects.filter(user=user, house=apartment).exists():
+            return Response({"error": "You haven't booked this house."}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            apartment = ReservationContents.objects.get(pk=post_pk)
+        # Validate rating
+        serializer = PostRatingSerializer(data=request.data)
+        if serializer.is_valid():
+            rating = serializer.validated_data["ratings"]
+            # Inside view
+            # PostRating.objects.create(post=apartment, user=user, ratings=rating)
 
-            # Ensure user has booked the apartment
-            # if not ReservationDetails.objects.filter(user=user, post=apartment).exists():
-            #     return Response({"error": "You haven't booked this house"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Create rating if user has booked the apartment
-            apartment_rating = PostRating.objects.create(post=apartment, user=user, ratings=rating)
-            serialized_apartment = ReservationContentsSerializer(apartment).data
+            # Save the rating
+            PostRating.objects.create(post=apartment, user=user, ratings=rating)
+            
+            apartment_data = ReservationContentsSerializer(apartment).data
             return Response({
-                "detail": serialized_apartment,
+                "detail": apartment_data,
                 "message": "Successfully rated"
             }, status=status.HTTP_200_OK)
 
-        except ReservationContents.DoesNotExist:
-            return Response({"error": "ReservationContents with such ID does not exist"}, status=status.HTTP_404_NOT_FOUND)
-
-        except Exception as err:
-            import traceback
-            return Response({"error": str(err), "detailed_error": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)      
         
+        
+        
+class PostRatingView(APIView):
+    queryset = PostRating.objects.all()
+    serializer_class = PostRatingSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """
+        Optionally restricts the returned ratings to a given post,
+        by filtering against a `post_id` query parameter in the URL.
+        """
+        queryset = PostRating.objects.all()
+        post_id = self.request.query_params.get('post_id')
+        user_id = self.request.query_params.get('user_id')
+        
+        if post_id is not None:
+            queryset = queryset.filter(post_id=post_id)
+        if user_id is not None:
+            queryset = queryset.filter(user_id=user_id)
+            
+        return queryset
+    
+    def create(self, request, *args, **kwargs):
+        # No check for existing ratings - users can rate multiple times
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Check if user is updating their own rating
+        if instance.user != request.user:
+            return Response(
+                {"detail": "You can only update your own ratings."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        return super().update(request, *args, **kwargs)
+    
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Check if user is updating their own rating
+        if instance.user != request.user:
+            return Response(
+                {"detail": "You can only update your own ratings."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        return super().partial_update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Check if user is deleting their own rating
+        if instance.user != request.user:
+            return Response(
+                {"detail": "You can only delete your own ratings."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        return super().destroy(request, *args, **kwargs)
+
         
 
 
@@ -222,6 +280,8 @@ class CreateGuests(APIView):
         return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
     
+
+
 
 class CustomerDetailsHousingView(APIView):
     """Handles customer reservation and payment initiation"""
