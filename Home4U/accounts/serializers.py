@@ -9,48 +9,81 @@ import re
 from django.contrib.auth.models import User
 
 
+User = get_user_model()
+
 class UserSerializers(serializers.ModelSerializer):
+    first_name = serializers.CharField(required=True)  # Non-unique by default
+    last_name = serializers.CharField(required=True)   # Non-unique by default
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
-    # number = serializers.CharField()
-
+  
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'email', 'username', 'password', 'confirm_password']
-
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("Email already exists.")
         return value
     
-    
-    def validate_number(self, value):
-        """Validate phone number format"""
-        phone_pattern = r'^\+?1?\d{9,15}$'  # Validates phone numbers like +123456789 or 123456789
-        if not re.match(phone_pattern, value):
-            raise serializers.ValidationError("Invalid phone number format.")
-        return value
-    
-    
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Username already exists.")
         return value
+    
+    def validate_password(self, value):
+        """
+        Validate password to:
+        - Start with an uppercase letter
+        - Contain at least one digit
+        - Contain at least one symbol
+        - Contain alphanumeric characters
+        """
+        # Check if password starts with uppercase
+        if not  len(value) > 9:
+            raise serializers.ValidationError("Password is too short or long... ")
+        
+        if len(value) < 8:
+            raise serializers.ValidationError("almost their")
+        
+        if not value[0].isupper():
+            raise serializers.ValidationError("Password must start with an uppercase letter and continue in lowercase.")
+        
+        if len(value) > 1 and not value[1].islower():
+             raise serializers.ValidationError("The second character of the password must be lowercase.")
+         
+        # Check for at least one digit
+        if not any(char.isdigit() for char in value):
+            raise serializers.ValidationError("Password must contain at least one digit.")
+        
+        if len(value) > 1 and value[1].isalpha() and not value[1].islower():
+            raise serializers.ValidationError("The second character of the password (if a letter) must be lowercase.")
 
-
+        # Check for at least one symbol
+        symbols = re.compile(r'[!@#$%^&*(),.?":{}|<>]')
+        if not symbols.search(value):
+            raise serializers.ValidationError("Password must contain at least one symbol.")
+        
+        # Check that it contains alphanumeric characters
+        if not any(char.isalpha() for char in value):
+            raise serializers.ValidationError("Password must contain at least one letter.")
+        
+        return value
+    
     def validate(self, data):
+        # Check that passwords match
         if data.get('password') != data.get('confirm_password'):
-            raise serializers.ValidationError("Passwords do not match.")
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
         return data
-
-
+    
     def create(self, validated_data):
-        validated_data.pop('confirm_password', None)  
-        user = User.objects.create_user(**validated_data)  
-        return user  #
-
-
+        # Remove confirm_password from validated data
+        validated_data.pop('confirm_password', None)
+        # Create user
+        user = User.objects.create_user(**validated_data)
+        return user
+    
+    
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -64,10 +97,35 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid username or password.")
         return {'user': user}
 
-class OTPVerificationSerializers(serializers.Serializer):
-    otp = serializers.CharField(max_length=6)
 
 
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    otp = serializers.IntegerField(
+        min_value=1000,
+        max_value=9999,
+        error_messages={
+            'min_value': 'OTP must be 4 digits.',
+            'max_value': 'OTP must be 4 digits.'
+        }
+    )
+    new_password = serializers.CharField(min_length=8, write_only=True)
+    confirm_password = serializers.CharField(min_length=8, write_only=True)
+    
+    def validate(self, data):
+        """
+        Check that the two password entries match
+        """
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Password fields didn't match."})
+        return data
+    
+    
+    
 class UpdateSerializers(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', required=False)
     email = serializers.EmailField(source='user.email', required=False)
@@ -95,15 +153,6 @@ class UpdateSerializers(serializers.ModelSerializer):
         instance.save()
         return instance
 
-class ResendOTPSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-
-class ForgotPasswordSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-
-class ResetPasswordSerializer(serializers.Serializer):
-    otp = serializers.CharField(max_length=6) # 6 digit otp.
-    new_password = serializers.CharField(write_only=True)
 
 class LogoutSerializer(serializers.Serializer):
     refresh_token = serializers.CharField()
@@ -114,3 +163,16 @@ class LogoutSerializer(serializers.Serializer):
         except Exception:
             raise ValidationError("Invalid refresh token.")
         return value
+    
+    
+class ResendOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    
+    def validate_email(self, value):
+        try:
+            user = User.objects.get(email=value)
+            if user.is_active:
+                raise serializers.ValidationError("User is already active.")
+            return value
+        except User.DoesNotExist:
+            raise serializers.ValidationError("No user found with this email address.")    

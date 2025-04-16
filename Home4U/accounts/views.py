@@ -9,8 +9,7 @@ from django.contrib.auth.models import User
 from .serializers import (UserSerializers,
                           UpdateSerializers,
                           ForgotPasswordSerializer, ResetPasswordSerializer,
-                          LoginSerializer, LogoutSerializer)
-
+                          LoginSerializer, LogoutSerializer, ResendOTPSerializer)
 from .models import VerificationToken, UserProfile
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import  NotFound
@@ -26,6 +25,8 @@ import uuid
 from django.contrib.auth import get_user_model
 
 
+
+
 User = get_user_model()
 class UserRegister(APIView):
     serializer_class = UserSerializers
@@ -36,7 +37,7 @@ class UserRegister(APIView):
             email = serializer.validated_data['email']
             username = serializer.validated_data['username']
             resend = request.query_params.get('resend') == 'true'
-            purpose = VerificationToken.Choices.REGISTERATION
+            purpose = VerificationToken.Choices.REGISTRATION
 
             try:
                 user = User.objects.get(email=email)
@@ -84,6 +85,59 @@ class UserRegister(APIView):
 signup = UserRegister.as_view()
 
 
+class ResendOTPView(APIView):
+    serializer_class = ResendOTPSerializer
+    
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            email = serializer.validated_data['email']
+            purpose = VerificationToken.Choices.REGISTERATION
+            print(f"email: {email}")
+            try:
+                # ✅ Corrected line
+                user = User.objects.get(email=email)
+
+                # Delete expired tokens
+                VerificationToken.objects.filter(
+                    user=user,
+                    is_used=False
+                ).exclude(
+                    expires_at__gte=timezone.now()
+                ).delete()
+
+                # Create a new token
+                token = VerificationToken.objects.create(user=user, purpose=purpose)
+                uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+
+                verification_link = request.build_absolute_uri(
+                    reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token.token})
+                )
+
+                send_mail(
+                    'Verify Your Account (New OTP)',
+                    f'Click the following link within 10 minutes to verify your account: {verification_link}',
+                    settings.EMAIL_HOST_USER,
+                    [user.email],
+                    fail_silently=False
+                )
+
+                return Response(
+                    {"message": "New verification link sent successfully."},
+                    status=status.HTTP_200_OK
+                )
+
+            except User.DoesNotExist:
+                return Response(
+                    {"message": "User not found."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+resend_otp = ResendOTPView.as_view()
+
+
 
 class VerifyOTPView(APIView):
     def get(self, request, uidb64, token):
@@ -112,6 +166,8 @@ class VerifyOTPView(APIView):
         except (User.DoesNotExist, VerificationToken.DoesNotExist, ValueError):
             return Response({"message": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
+
+
 class LoginView(APIView):
     serializer_class = LoginSerializer
     def post(self, request):
@@ -139,6 +195,57 @@ class LoginView(APIView):
 
 
 
+class ResendOTPView(APIView):
+    serializer_class = ResendOTPSerializer
+    
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        
+        if serializer.is_valid(raise_exception=True):
+            email = serializer.validated_data['email']
+            purpose = VerificationToken.Choices.REGISTRATION
+            
+            try:
+                user = User.objects.get(email=email)
+                
+                
+                VerificationToken.objects.filter(
+                    user=user, 
+                    is_used=False
+                ).exclude(
+                    expires_at__gte=timezone.now()
+                ).delete()
+                
+                # Create a new verification token
+                token = VerificationToken.objects.create(user=user, purpose=purpose)
+                uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+                
+                verification_link = request.build_absolute_uri(
+                    reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token.token})
+                )
+                
+                send_mail(
+                    'Verify Your Account (New OTP)',
+                    f'Click the following link within 10 minutes to verify your account: {verification_link}',
+                    settings.EMAIL_HOST_USER,
+                    [user.email],
+                    fail_silently=False
+                )
+                
+                return Response(
+                    {"message": "New verification link sent successfully."}, 
+                    status=status.HTTP_200_OK
+                )
+                
+            except User.DoesNotExist:
+                return Response(
+                    {"message": "User not found."}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+resend_otp = ResendOTPView.as_view()
+
+
 class UpdateView(APIView):
     serializer_class = UpdateSerializers
     permission_classes = [IsAuthenticated]
@@ -160,8 +267,9 @@ class UpdateView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+update = UpdateView.as_view()  
 
-update = UpdateView.as_view()   
+
 
 
 class ForgotPasswordView(generics.CreateAPIView):
@@ -171,16 +279,23 @@ class ForgotPasswordView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
+        purpose = VerificationToken.Choices.PASSWORD_RESET  # Now correctly uses "PR"
 
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             return Response({"error": "User with this email does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Delete any existing password reset OTPs for the user
-        OTP.objects.filter(user=user, purpose='password_reset', is_used=False, expires_at__gt=timezone.now()).delete()
+        # Delete any existing password reset tokens for the user
+        VerificationToken.objects.filter(
+            user=user, 
+            purpose=purpose, 
+            is_used=False, 
+            expires_at__gt=timezone.now()
+        ).delete()
 
-        otp_instance = OTP.objects.create(user=user, purpose='password_reset')
+        otp_instance = VerificationToken.objects.create(user=user, purpose=purpose)
+        
         try:
             send_mail(
                 'Reset Your Password',
@@ -191,11 +306,17 @@ class ForgotPasswordView(generics.CreateAPIView):
             )
             return Response({"message": "Password reset OTP sent to your email."}, status=status.HTTP_200_OK)
         except Exception as err:
-            print(err)
+            return Response(
+                {"error": "Failed to send email. Please try again later."}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+            
             
             
 class ResetPasswordView(generics.CreateAPIView):
     serializer_class = ResetPasswordSerializer
+    
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -203,10 +324,12 @@ class ResetPasswordView(generics.CreateAPIView):
         new_password = serializer.validated_data['new_password']
 
         try:
-            otp_instance = OTP.objects.get(otp=otp, purpose='password_reset', is_used=False)
-
-            if otp_instance.is_expired():
-                return Response({"error": "OTP has expired."}, status=status.HTTP_400_BAD_REQUEST)
+            otp_instance = VerificationToken.objects.get(
+                otp=otp, 
+                purpose=VerificationToken.Choices.PASSWORD_RESET,  # Using the correct constant
+                is_used=False,
+                expires_at__gt=timezone.now()
+            )
 
             user = otp_instance.user
             user.set_password(new_password)
@@ -216,11 +339,13 @@ class ResetPasswordView(generics.CreateAPIView):
             otp_instance.save()
 
             return Response({"message": "Password reset successfully."}, status=status.HTTP_200_OK)
-
-        except OTP.DoesNotExist:
-            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
-
-
+        except VerificationToken.DoesNotExist:
+            return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+        
+        
+        
 class LogoutView(APIView):
     serializer_class = LogoutSerializer
     def post(self, request):

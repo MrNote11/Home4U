@@ -17,11 +17,6 @@ class ReservationImagesSerializer(serializers.ModelSerializer):
 
 
 
-    
-
-        # Create the reservation
-        # return ReservationDetails.objects.create(user=user, post=post, **validated_data)
-
 class ReservationContentsSerializer(serializers.ModelSerializer):
     likes_count = serializers.SerializerMethodField()
     images = ReservationImagesSerializer(many=True) 

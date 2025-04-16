@@ -54,11 +54,11 @@ class HomeViews(generics.ListAPIView):
             return queryset.order_by("created")
 
         elif homepage_filter == 'newly added':
-            return queryset.order_by("-created")
+            return queryset.filter(status__icontains="Newly added")
 
         elif homepage_filter == 'ratings':
-            post_ids = PostRating.objects.filter(ratings__gte=3).values_list('post_id', flat=True)
-            return queryset.filter(id__in=post_ids)
+            # post_ids = PostRating.objects.filter(ratings__gte=3).values_list('post_id', flat=True)
+            return queryset.filter(status__icontains="Top Rated")
 
         return queryset.none()
 

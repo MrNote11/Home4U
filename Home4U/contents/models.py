@@ -89,13 +89,13 @@ class ReservationDetails(models.Model):
 
     house = models.ForeignKey(ReservationContents, on_delete=models.CASCADE, null=True, related_name='houses')
 
-    first_name = models.CharField(max_length=30, null=True)
+    guest_first_name = models.CharField(max_length=30, null=True, blank=True)
 
-    last_name = models.CharField(max_length=30, null=True)
+    guest_last_name = models.CharField(max_length=30, null=True, blank=True)
 
-    phone_number = models.CharField(max_length=30, null=True)
+    guest_phone_number = models.CharField(max_length=30, null=True, blank=True)
 
-    email = models.EmailField(null=True)
+    guest_email = models.EmailField(null=True, blank=True)
 
     GUESTS = [
 
