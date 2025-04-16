@@ -13,18 +13,23 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .filters import ReservationFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound
-from django.db.models import Avg, Count, Value, FloatField, Func
+
 from django.shortcuts import get_object_or_404
 import uuid
 from payments.models import Payment
 from django.conf import settings
 import requests
+from django.db.models.functions import Round, Least
+from django.db.models import Avg, Count, Value, FloatField, IntegerField, ExpressionWrapper, Func
+
+from django.db.models import Avg, Count, Value, FloatField, ExpressionWrapper
+from django.db.models.functions import Round, Least
+from rest_framework import generics, status, filters
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
 
 
-
-class Round(Func):
-    function = 'ROUND'
-    template = "%(function)s(%(expressions)s, 1)"
 
 class HomeViews(generics.ListAPIView):
     serializer_class = ReservationContentsSerializer
@@ -35,34 +40,35 @@ class HomeViews(generics.ListAPIView):
     search_fields = ['house', 'state']
 
     def get_queryset(self):
+        # Annotate extra fields for rating, likes, etc.
         queryset = ReservationContents.objects.annotate(
-            average_rating=Round(Avg('ratings__ratings')),  
+            raw_average_rating=Avg('ratings__ratings'),
+            average_rating=Least(
+                ExpressionWrapper(
+                    Round(Avg('ratings__ratings')),
+                    output_field=FloatField()  # Or IntegerField for rounded
+                ),
+                Value(5.0)
+            ),
             total_raters=Count('ratings__user', distinct=True),
             total_likes=Count('post_likes')
         )
 
-        # global_avg = PostRating.objects.aggregate(global_avg=Avg('ratings'))['global_avg']
-        # self.global_avg_rating = round(global_avg, 1) if global_avg else 0  # ✅ Round Python-level
-
         query_params = self.request.query_params
         homepage_filter = query_params.get('homepage')
 
+        # Filter according to the homepage parameter
         if homepage_filter == 'home':
-            # reservation_id = query_params.get('id')
-            # if reservation_id and reservation_id.isdigit():
-            #     return queryset.filter(id=int(reservation_id))
-            return queryset.order_by("created")
+            return queryset.order_by("-created")  # Changed to '-created' for latest first
 
         elif homepage_filter == 'newly added':
             return queryset.filter(status__icontains="Newly added")
 
         elif homepage_filter == 'ratings':
-            # post_ids = PostRating.objects.filter(ratings__gte=3).values_list('post_id', flat=True)
             return queryset.filter(status__icontains="Top Rated")
 
-        return queryset.none()
-
-
+        # Return all if no filter specified
+        return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -77,7 +83,6 @@ class HomeViews(generics.ListAPIView):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 
 class HomeDescriptions(generics.RetrieveAPIView):
