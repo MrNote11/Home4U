@@ -144,7 +144,7 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReservationDetails
         fields = (
-            'first_name', 'last_name', 'phone_number', 'email', 'total_price',
+            'guest_first_name', 'guest_last_name', 'guest_phone_number', 'guest_email', 'total_price',
             'customer_first_name', 'customer_last_name', 'customer_email', 'customer_phone_number'
         )
     
@@ -187,12 +187,12 @@ class ReservationDetailSerializer(serializers.ModelSerializer):
         """Update reservation details"""
         print(f"validated_data: {validated_data}")
         print(f"instance: {instance}")
-        print(f"instance.first_name1: {instance.first_name}")
-        instance.first_name = validated_data.get('first_name', instance.first_name)
-        print(f"instance.first_name2: {instance.first_name}")
-        instance.last_name = validated_data.get('last_name', instance.last_name)
-        instance.phone_number = validated_data.get('phone_number', instance.phone_number)
-        instance.email = validated_data.get('email', instance.email)
+        print(f"instance.first_name1: {instance.guest_first_name}")
+        instance.guest_first_name = validated_data.get('guest_first_name', instance.guest_first_name)
+        print(f"instance.first_name2: {instance.guest_first_name}")
+        instance.guest_last_name = validated_data.get('guest_last_name', instance.guest_last_name)
+        instance.guest_phone_number = validated_data.get('guest_phone_number', instance.guest_phone_number)
+        instance.guest_email = validated_data.get('guest_email', instance.guest_email)
         instance.save()  # ✅ Save changes
 
         return instance  # ✅ Return the updated instance
