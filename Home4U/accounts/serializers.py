@@ -32,13 +32,6 @@ class UserSerializers(serializers.ModelSerializer):
         return value
     
     def validate_password(self, value):
-        """
-        Validate password to:
-        - Start with an uppercase letter
-        - Contain at least one digit
-        - Contain at least one symbol
-        - Contain alphanumeric characters
-        """
         # Check if password starts with uppercase
         if not  len(value) > 9:
             raise serializers.ValidationError("Password is too short or long... ")
