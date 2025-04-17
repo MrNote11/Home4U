@@ -62,7 +62,8 @@ class VerificationToken(models.Model):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    profile_image = models.ImageField(upload_to='user_images/', default='media/user_images/Good_things_are_coming.png')
+    profile_image = CloudinaryField(default='Good_things_are_coming_dok1ti', blank=True,
+                                        null=True)
 
     def __str__(self):
         return self.user.username
