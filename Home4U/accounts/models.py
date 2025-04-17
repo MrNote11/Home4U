@@ -62,7 +62,7 @@ class VerificationToken(models.Model):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    profile_image = ResizedImageField(size=[600, 600], quality=85, upload_to='user_images/', default='user_images/default.png')
+    profile_image = models.ImageField(upload_to='user_images/', default='media/user_images/Good_things_are_coming_fOD6Mp2.png')
 
     def __str__(self):
         return self.user.username
