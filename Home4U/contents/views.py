@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import filters
 from rest_framework.views import APIView
 from .serializers import (ReservationContentsSerializer, GuestsSerializers, 
-                          ReservationDetailSerializer,
+                          ReservationDetailSerializer, BookingSerializer,
                           PostLikeSerializer, PostRatingSerializer
                           )
 from .paginations import Limits
@@ -85,6 +85,8 @@ class HomeViews(generics.ListAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+
+
 class HomeDescriptions(generics.RetrieveAPIView):
      def get(self, request, pk):
         house = get_object_or_404(ReservationContents, id=pk)
@@ -96,6 +98,21 @@ class HomeDescriptions(generics.RetrieveAPIView):
         
         return Response(data)
 
+
+
+class BookingViews(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        bookings = ReservationDetails.objects.filter(user=user)
+
+        serializer = BookingSerializer(bookings, many=True)
+
+        return Response({
+            "data": serializer.data
+        }, status=200)
+        
 
 class ReservationRatingView(APIView):
     permission_classes = [IsAuthenticated]
@@ -127,70 +144,9 @@ class ReservationRatingView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)      
         
+ 
         
         
-class PostRatingView(APIView):
-    queryset = PostRating.objects.all()
-    serializer_class = PostRatingSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        """
-        Optionally restricts the returned ratings to a given post,
-        by filtering against a `post_id` query parameter in the URL.
-        """
-        queryset = PostRating.objects.all()
-        post_id = self.request.query_params.get('post_id')
-        user_id = self.request.query_params.get('user_id')
-        
-        if post_id is not None:
-            queryset = queryset.filter(post_id=post_id)
-        if user_id is not None:
-            queryset = queryset.filter(user_id=user_id)
-            
-        return queryset
-    
-    def create(self, request, *args, **kwargs):
-        # No check for existing ratings - users can rate multiple times
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        # Check if user is updating their own rating
-        if instance.user != request.user:
-            return Response(
-                {"detail": "You can only update your own ratings."}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-            
-        return super().update(request, *args, **kwargs)
-    
-    def partial_update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        # Check if user is updating their own rating
-        if instance.user != request.user:
-            return Response(
-                {"detail": "You can only update your own ratings."}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-            
-        return super().partial_update(request, *args, **kwargs)
-    
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        # Check if user is deleting their own rating
-        if instance.user != request.user:
-            return Response(
-                {"detail": "You can only delete your own ratings."}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-            
-        return super().destroy(request, *args, **kwargs)
-
-        
-
-
-
 class LikePostView(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -209,6 +165,8 @@ class LikePostView(APIView):
             return Response({'message': 'Reservation already liked', 'likes_count': total_likes}, status=status.HTTP_200_OK)
 
         return Response({'message': 'Reservation liked', 'likes_count': total_likes}, status=status.HTTP_201_CREATED)
+
+
 
 
 

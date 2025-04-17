@@ -2,7 +2,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from .views import (CreateGuests, ReservationRatingView, #likedpost,
-                    LikePostView, UserLikedPostsView,
+                    LikePostView, UserLikedPostsView, BookingViews,
                     UnlikePostView, HomeViews, HomeDescriptions, 
                                      CustomerDetailsHousingView)
 
@@ -14,6 +14,7 @@ urlpatterns = [
     path('<int:pk>/like/', LikePostView.as_view(), name='house_like'),
     path('likedview/', UserLikedPostsView.as_view(), name='likedview'),
     path('<int:pk>/delete/', UnlikePostView.as_view(), name='deletelike'),
+    path('bookings/', BookingViews.as_view(), name='booking'),
     # path('newly/', TopHomeView.as_view(), name='new_posts'),
     path('<int:post_pk>/ratings/', ReservationRatingView.as_view(), name='rating_posts'),
     path('<int:id>/customer_input/', CustomerDetailsHousingView.as_view(), name='customer-input'),
