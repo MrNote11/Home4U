@@ -9,7 +9,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 import uuid
 import random
 from django_resized import ResizedImageField
-
+import string
 
 # Model
 class VerificationToken(models.Model):
@@ -34,7 +34,16 @@ class VerificationToken(models.Model):
         blank=True, 
         null=True
     )
+    
+    def is_valid(self):
+        """Check if OTP is valid (not used and not expired)"""
+        from django.conf import settings
+        
+        if self.is_used:
+            return False
 
+
+    
     def is_expired(self):
         return self.expires_at < timezone.now()
 

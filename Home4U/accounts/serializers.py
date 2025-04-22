@@ -92,12 +92,12 @@ class LoginSerializer(serializers.Serializer):
 
 
 
-class ForgotPasswordSerializer(serializers.Serializer):
+class SendingEmailVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
 
 
-class ResetPasswordSerializer(serializers.Serializer):
+class ForgetPasswordOtpSerializer(serializers.Serializer):
     otp = serializers.IntegerField(
         min_value=1000,
         max_value=9999,
@@ -106,6 +106,11 @@ class ResetPasswordSerializer(serializers.Serializer):
             'max_value': 'OTP must be 4 digits.'
         }
     )
+    
+    
+    
+    
+class ResetPasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(min_length=8, write_only=True)
     confirm_password = serializers.CharField(min_length=8, write_only=True)
     
@@ -115,7 +120,7 @@ class ResetPasswordSerializer(serializers.Serializer):
         """
         if data['new_password'] != data['confirm_password']:
             raise serializers.ValidationError({"confirm_password": "Password fields didn't match."})
-        return data
+        return data    
     
     
     

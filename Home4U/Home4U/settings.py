@@ -45,6 +45,11 @@ ALLOWED_HOSTS = ['*', "2906-105-112-203-225.ngrok-free.app", "127.0.0.1",
 FLW_SECRET_KEY = 'FLWSECK_TEST-be112cfcacb4bd6e592aa49b64d7b5b4-X'
 FLW_PUBLIC_KEY = 'FLWPUBK_TEST-a014eea4344fe9761cfe15b6f352fbbc-X'
 FLW_API_URL = "https://api.flutterwave.com/v3"
+
+
+
+
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -70,6 +75,9 @@ INSTALLED_APPS = [
     'whitenoise.runserver_nostatic'
 ]
 
+
+
+
 REST_FRAMEWORK = {
     # 'DEFAULT_PERMISSION_CLASSES': [
     #     # 'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
@@ -82,6 +90,11 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
+
+
+
+
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Your Project API',
     'DESCRIPTION': 'Your project description',
@@ -89,6 +102,9 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
     # OTHER SETTINGS
 }
+
+
+
 
 
 SIMPLE_JWT = {
@@ -108,12 +124,17 @@ secret_key = os.environ.get("FLW_SECRET_KEY", "FLWSECK_TEST-be112cfcacb4bd6e592a
 if not secret_key:
     raise ValueError("Error loading the FLW_SECRET_KEY from .env file")
     
+    
+    
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'  # Or your SMTP server
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'aliyahsulaiman3@gmail.com'
 EMAIL_HOST_PASSWORD = 'otyd hdzx efag wlem'
+
+
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

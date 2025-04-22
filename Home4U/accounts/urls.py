@@ -4,8 +4,9 @@ from django.conf.urls.static import static
 from .views import (
     signup,
     LoginView,
-    ForgotPasswordView,
+    SendingEmailVerificationView,
     ResetPasswordView,
+    ForgetPasswordOtpView,
     LogoutView,
     update,
     VerifyOTPView,
@@ -25,7 +26,8 @@ from rest_framework_simplejwt.views import (
 urlpatterns = [
     path('signup/', signup, name='signup'),
     path('login/', LoginView.as_view(), name='login'),
-    path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),  # Forgot Password
+    path('forgot-password/', SendingEmailVerificationView.as_view(), name='forgot-password'),  # checking email
+    path('otp-validate/', ForgetPasswordOtpView.as_view(), name='otp'),
     path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),  # Reset Password
     path('logout/', LogoutView.as_view(), name='logout'),  # User logout
     path('update-profile/', update, name='update'),
