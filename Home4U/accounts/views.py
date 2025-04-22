@@ -36,6 +36,7 @@ class UserRegister(APIView):
 
         if serializer.is_valid(raise_exception=True):
             email = serializer.validated_data['email']
+            user = serializer.validated_data['user']
             resend = request.query_params.get('resend') == 'true'
             purpose = VerificationToken.Choices.REGISTRATION
 
@@ -200,7 +201,7 @@ class LoginView(APIView):
                     'email': user.email,
                     'profile_image': request.build_absolute_uri(profile_image) if profile_image else None,
                 }
-            }, status=status.HTTP_302_FOUND)
+            }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
