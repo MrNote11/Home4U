@@ -384,6 +384,10 @@ class ResetPasswordView(generics.CreateAPIView):
      def post(self, request, *args, **kwargs):
         # user_id = request.session.get('reset_user_id')
         user = request.user
+        purpose = VerificationToken.Choices.PASSWORD_RESET
+        check=VerificationToken.objects.filter(user=user, purpose=purpose).first()
+        check = check.otp
+        print(f'check: {check}')
         if not user:
             return Response({"error": "Session expired or invalid request."}, status=400)
 
@@ -391,7 +395,7 @@ class ResetPasswordView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
 
         new_password = serializer.validated_data['new_password']
-        user = User.objects.get(id=user.id)
+        user = User.objects.get(username=user)
         # user = get_object_or_404(User, id=user.id)
         user.set_password(new_password)
         user.save()
