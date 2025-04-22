@@ -5,7 +5,6 @@ from rest_framework import generics
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
-
 from .serializers import (UserSerializers,
                           UpdateSerializers,
                         SendingEmailVerificationSerializer, ResetPasswordSerializer,
@@ -37,7 +36,6 @@ class UserRegister(APIView):
 
         if serializer.is_valid(raise_exception=True):
             email = serializer.validated_data['email']
-            username = serializer.validated_data['username']
             resend = request.query_params.get('resend') == 'true'
             purpose = VerificationToken.Choices.REGISTRATION
 
@@ -56,7 +54,7 @@ class UserRegister(APIView):
                     verification_link = request.build_absolute_uri(reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token.token}))
                     send_mail(
                         'Verify Your Account (New OTP)',
-                        f'Click the following link within 10 minutes to verify your account: {verification_link}',
+                        f'Click the following link within 11 minutes to verify your account: {verification_link}',
                         settings.EMAIL_HOST_USER,
                         [user.email],
                         fail_silently=False
@@ -87,6 +85,9 @@ class UserRegister(APIView):
 signup = UserRegister.as_view()
 
 
+
+
+
 class ResendOTPView(APIView):
     serializer_class = ResendOTPSerializer
     
@@ -96,7 +97,7 @@ class ResendOTPView(APIView):
 
         if serializer.is_valid(raise_exception=True):
             email = serializer.validated_data['email']
-            purpose = VerificationToken.Choices.REGISTERATION
+            purpose = VerificationToken.Choices.REGISTRATION
             print(f"email: {email}")
             try:
                 # ✅ Corrected line
@@ -120,7 +121,7 @@ class ResendOTPView(APIView):
 
                 send_mail(
                     'Verify Your Account (New OTP)',
-                    f'Click the following link within 10 minutes to verify your account: {verification_link}',
+                    f'Click the following link within 11 minutes to verify your account: {verification_link}',
                     settings.EMAIL_HOST_USER,
                     [user.email],
                     fail_silently=False
@@ -138,6 +139,8 @@ class ResendOTPView(APIView):
                 )
 
 resend_otp = ResendOTPView.as_view()
+
+
 
 
 
@@ -170,6 +173,8 @@ class VerifyOTPView(APIView):
 
 
 
+
+
 class LoginView(APIView):
     serializer_class = LoginSerializer
     def post(self, request):
@@ -197,6 +202,7 @@ class LoginView(APIView):
                 }
             }, status=status.HTTP_302_FOUND)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 
@@ -279,6 +285,8 @@ update = UpdateView.as_view()
 
 
 
+
+
 class SendingEmailVerificationView(generics.CreateAPIView):
     serializer_class = SendingEmailVerificationSerializer
 
@@ -321,6 +329,8 @@ class SendingEmailVerificationView(generics.CreateAPIView):
             
             
             
+            
+            
 class ForgetPasswordOtpView(generics.CreateAPIView):
     serializer_class = ForgetPasswordOtpSerializer  # This should only take the `otp`
 
@@ -329,7 +339,6 @@ class ForgetPasswordOtpView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         data = request.data
         
-       
         print(f'data: {data}')
         
         otp = serializer.validated_data['otp']
@@ -352,10 +361,6 @@ class ForgetPasswordOtpView(generics.CreateAPIView):
             
             
             print(f"user: {user}")
-
-            # Save user ID in session
-            # request.session['reset_user_id'] = user.id
-            # request.session.modified = True
             
 
             # Mark OTP as used
@@ -367,6 +372,9 @@ class ForgetPasswordOtpView(generics.CreateAPIView):
 
         except VerificationToken.DoesNotExist:
             return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 
 class ResetPasswordView(generics.CreateAPIView):
@@ -392,6 +400,7 @@ class ResetPasswordView(generics.CreateAPIView):
         del request.session['reset_user_id']
 
         return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+        
         
         
         

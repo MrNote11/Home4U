@@ -12,9 +12,6 @@ from .views import (
     VerifyOTPView,
     resend_otp
 
-    
-    # profile
-    # customdetails
 )
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -33,9 +30,6 @@ urlpatterns = [
     path('update-profile/', update, name='update'),
     path('verify-otp/<str:uidb64>/<uuid:token>/', VerifyOTPView.as_view(), name='verify-otp'),
     path('resend-otp/', resend_otp, name='resend-otp'),
-    path('resend-otp/', resend_otp, name='resend-otp'),
-
-    # path('profile/', profile, name='profile')
 ]
 
     
