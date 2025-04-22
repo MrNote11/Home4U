@@ -396,8 +396,8 @@ class ResetPasswordView(generics.CreateAPIView):
         user.set_password(new_password)
         user.save()
 
-        # Clean up session
-        del request.session['reset_user_id']
+        
+        # del request.session['reset_user_id']
 
         return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
         
