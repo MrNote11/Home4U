@@ -381,7 +381,6 @@ class ForgetPasswordOtpView(generics.CreateAPIView):
 class ResetPasswordView(generics.CreateAPIView):
      serializer_class = ResetPasswordSerializer  # includes new_password, confirm_password
      authentication_classes = [JWTAuthentication]
-     permission_classes = [IsAuthenticated]
      def post(self, request, *args, **kwargs):
         # user_id = request.session.get('reset_user_id')
         user = request.user
