@@ -363,9 +363,9 @@ class ForgetPasswordOtpView(generics.CreateAPIView):
             print(f"user: {user}")
             
 
-            # Mark OTP as used
-            otp_instance.is_used = True
-            otp_instance.save()
+            # # Mark OTP as used
+            # otp_instance.is_used = True
+            # otp_instance.save()
 
             return Response({"message": "OTP verified successfully.",
                              "token":data}, status=status.HTTP_200_OK)
@@ -382,8 +382,10 @@ class ResetPasswordView(generics.CreateAPIView):
     
     def post(self, request, *args, **kwargs):
         user = request.user
+        user.is_authrnticated
+        
         if not user or not user.is_authenticated:
-            return Response({"error": "Not authenticated."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({f"error": "{user}Not authenticated."}, status=status.HTTP_401_UNAUTHORIZED)
             
         # Process password change
         serializer = self.get_serializer(data=request.data)
