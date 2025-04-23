@@ -36,7 +36,6 @@ class UserRegister(APIView):
 
         if serializer.is_valid(raise_exception=True):
             email = serializer.validated_data['email']
-            user = serializer.validated_data['user']
             resend = request.query_params.get('resend') == 'true'
             purpose = VerificationToken.Choices.REGISTRATION
 
