@@ -382,7 +382,7 @@ class ResetPasswordView(generics.CreateAPIView):
     
     def post(self, request, *args, **kwargs):
         user = request.user
-        user.is_authrnticated
+        user.is_authenticated
         
         if not user or not user.is_authenticated:
             return Response({f"error": "{user}Not authenticated."}, status=status.HTTP_401_UNAUTHORIZED)
