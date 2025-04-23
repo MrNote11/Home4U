@@ -173,4 +173,4 @@ class ResendOTPSerializer(serializers.Serializer):
                 raise serializers.ValidationError("User is already active.")
             return value
         except User.DoesNotExist:
-            raise serializers.ValidationError("No user found with this email address.")    
+            raise serializers.ValidationError("No user found with this email address.")      

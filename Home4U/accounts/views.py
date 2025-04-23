@@ -377,38 +377,35 @@ class ForgetPasswordOtpView(generics.CreateAPIView):
 
 
 
-
 class ResetPasswordView(generics.CreateAPIView):
-     serializer_class = ResetPasswordSerializer  # includes new_password, confirm_password
-     def post(self, request, *args, **kwargs):
-        # user_id = request.session.get('reset_user_id')
+    serializer_class = ResetPasswordSerializer
+    authentication_classes = [JWTAuthentication]
+    
+    def post(self, request, *args, **kwargs):
         user = request.user
-        purpose = VerificationToken.Choices.PASSWORD_RESET
-        check=VerificationToken.objects.filter(user=user, purpose=purpose)[0]
-        check1 = check.otp
-        users = check.user
-        print(f'check: {users}')
-        print(f'check: {check1}')
-        if not user:
-            return Response({"error": "Session expired or invalid request."}, status=400)
-
+        if not user or not user.is_authenticated:
+            return Response({"error": "Not authenticated."}, status=status.HTTP_401_UNAUTHORIZED)
+            
+        # Process password change
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
+        
         new_password = serializer.validated_data['new_password']
-        user = User.objects.get(id=users.id)
-        # user = get_object_or_404(User, id=user.id)
         user.set_password(new_password)
         user.save()
-
         
-        # del request.session['reset_user_id']
-
+        # Optional: Mark verification token as used
+        purpose = VerificationToken.Choices.PASSWORD_RESET
+        verification = VerificationToken.objects.filter(
+            user=user, 
+            purpose=purpose
+        )[0]
+        
+        if verification:
+            verification.is_used = True
+            verification.save()
+        
         return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
-        
-        
-        
-        
         
 class LogoutView(APIView):
     serializer_class = LogoutSerializer
