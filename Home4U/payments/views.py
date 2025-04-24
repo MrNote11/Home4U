@@ -68,7 +68,7 @@ class InitiatePayment(APIView):
         user = request.user
         print(f"Reservation ID: {reservation_id}")
         print(user)
-        reservation = ReservationDetails.objects.get(post_id=reservation_id, user=user)
+        reservation = ReservationDetails.objects.get(house=reservation_id, user=user)
         print(f"Reservation ID: {reservation_id}")
         print(f"Logged-in user: {user}")
         total_amount = reservation.calculate_total_price()
