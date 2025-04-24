@@ -8,6 +8,7 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
+
 """
 from datetime import timedelta
 import os
@@ -214,16 +215,6 @@ if ENVIRONMENT_VARIABLE and POSTGRESS == True:
      DATABASES ={
         "default": dj_database_url.parse(os.environ.get('DATABASE_URL'))
                 }
-     
-    #  DATABASES = {
-    #  'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
-    #     }
-     
-    #  DATABASES = {
-    # 'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
-    #         }
-     
-
 
 else:
     DATABASES = {
@@ -243,21 +234,6 @@ if 'default' in DATABASES and DATABASES['default']['ENGINE'] == 'django.db.backe
      
 INTERNAL_IPS = ('127.0.0.1', 'localhost:8000')
     
-            
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
-# if not DEBUG:
-
-    
-
-
-
-# DATABASES['default'] = dj_database_url.parse("postgresql://home4u_user:Vn6hY6hb5YXbg4O7rWe7zFvVgQx0IzM9@dpg-cv9a21in91rc73d8lnqg-a.oregon-postgres.render.com/home4u")
-
-
-# Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -304,11 +280,6 @@ if POSTGRESS and ENVIRONMENT_VARIABLE == True:
 else:
     MEDIA_URL = '/media/'
 
-
-
-# CLOUD_API_NAME = os.environ.get('dtmw6jgue')
-# CLOUD_API_KEY = os.environ.get('887834964485546')
-# CLOUD_API_SECRET = os.environ.get('h1vYbJJa-s_qabXBx7vi4dCYiUc')
 
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv('CLOUD_API_NAME'),

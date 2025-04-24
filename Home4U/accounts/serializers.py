@@ -113,6 +113,7 @@ class ForgetPasswordOtpSerializer(serializers.Serializer):
 class ResetPasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(min_length=8, write_only=True)
     confirm_password = serializers.CharField(min_length=8, write_only=True)
+    otp = serializers.CharField(max_length=4, min_length=4)
     
     def validate(self, data):
         """
@@ -121,6 +122,8 @@ class ResetPasswordSerializer(serializers.Serializer):
         if data['new_password'] != data['confirm_password']:
             raise serializers.ValidationError({"confirm_password": "Password fields didn't match."})
         return data    
+    
+    
     
     
     
@@ -152,6 +155,8 @@ class UpdateSerializers(serializers.ModelSerializer):
         return instance
 
 
+
+
 class LogoutSerializer(serializers.Serializer):
     refresh_token = serializers.CharField()
 
@@ -161,6 +166,8 @@ class LogoutSerializer(serializers.Serializer):
         except Exception:
             raise ValidationError("Invalid refresh token.")
         return value
+    
+    
     
     
 class ResendOTPSerializer(serializers.Serializer):
