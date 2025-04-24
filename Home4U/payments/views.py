@@ -135,8 +135,8 @@ Original Testing
 class PaymentCallback(APIView):
     """Handles the redirect callback from Flutterwave"""
 
-    def get(self, request, reference):
-        # tx_ref = request.GET.get('tx_ref')
+    def get(self, request):
+        tx_ref = request.GET.get('tx_ref')
         # url = f"https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref={tx_ref}"
         # headers = {
         #     "Authorization": f"Bearer {settings.FLW_SECRET_KEY}",
@@ -153,9 +153,8 @@ class PaymentCallback(APIView):
         #     return Response({"error": "Failed to decode Flutterwave response"}, status=500)
         
 
-        payment = Payment.objects.get(reference=reference, user=request.user)
-        reference = payment.reference
-        paystack_url_verify = f"https://api.paystack.co/transactions/verify_by_reference?tx_ref={reference}"
+
+        paystack_url_verify = f"https://api.paystack.co/transaction/verify/{tx_ref}"
         paystack_secret_key = f"{settings.PAYSTACK_SECRET_KEY}"
         headers_paystack ={
             "Authorization": f"Bearer {paystack_secret_key}",
@@ -166,7 +165,7 @@ class PaymentCallback(APIView):
 
         if res_data["data"]["status"] == "success":
             # Update payment status in DB here
-            payment = Payment.objects.get(reference=reference)
+            payment = Payment.objects.get(reference=tx_ref)
             payment.status = Payment.Status.SUCCESSFUL
             payment.save()
             return Response({"message": "Payment successful"}, status=200)

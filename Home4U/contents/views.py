@@ -304,6 +304,7 @@ class CustomerDetailsHousingView(APIView):
             
             
             data = {
+                "reference": reference,
                 "email": email,
                 "amount": float(total_amount * 100),
                 "reference": reference,
