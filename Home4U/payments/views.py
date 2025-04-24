@@ -152,8 +152,8 @@ class PaymentCallback(APIView):
         # except requests.exceptions.JSONDecodeError:
         #     return Response({"error": "Failed to decode Flutterwave response"}, status=500)
         
-        
-        paystack_url_verify = f"{settings.PAYSTACK_URL_VERIFY}"
+        reference = request.GET.get("reference")
+        paystack_url_verify = f"{settings.PAYSTACK_URL_VERIFY}/{reference}"
         paystack_secret_key = f"{settings.PAYSTACK_SECRET_KEY}"
         reference = request.GET.get("reference")
         headers_paystack ={
