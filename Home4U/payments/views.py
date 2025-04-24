@@ -135,7 +135,7 @@ Original Testing
 class PaymentCallback(APIView):
     """Handles the redirect callback from Flutterwave"""
 
-    def get(self, request):
+    def get(self, request, reference):
         # tx_ref = request.GET.get('tx_ref')
         # url = f"https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref={tx_ref}"
         # headers = {
@@ -152,8 +152,10 @@ class PaymentCallback(APIView):
         # except requests.exceptions.JSONDecodeError:
         #     return Response({"error": "Failed to decode Flutterwave response"}, status=500)
         
-        reference = request.GET.get("reference")
-        paystack_url_verify = f"{settings.PAYSTACK_URL_VERIFY}/{reference}"
+
+        payment = Payment.objects.get(reference=reference, user=request.user)
+        reference = payment.reference
+        paystack_url_verify = f"https://api.paystack.co/transaction/verify/{reference}"
         paystack_secret_key = f"{settings.PAYSTACK_SECRET_KEY}"
         reference = request.GET.get("reference")
         headers_paystack ={
