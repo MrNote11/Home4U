@@ -316,47 +316,47 @@ class CustomerDetailsHousingView(APIView):
             }
 
             try:
-                # response = requests.post(flutterwave_url, json=payload, headers=headers)
-                # response_data = response.json()
+                response = requests.post(flutterwave_url, json=payload, headers=headers)
+                response_data = response.json()
                 
                
-                # if response.status_code == 200 and response_data.get("status") == "success":
-                #     payment=Payment.objects.create(
-                #         user=user,
-                #         reservation=reservation,
-                #         reference=reference,
-                #         total_amount=total_amount,
-                #         house = house
-                #     )
-                #     payment.Status.PENDING
-                #     return Response({
-                #         "message": "Reservation updated and payment initiated successfully!",
-                #         "customer_id": updated_reservation.id,
-                #         "reservation_details": serializer.data,
-                #         "payment_link": response_data["data"]["link"],
-                #         "reference": reference,
-                #     }, status=201)
+                if response.status_code == 200 and response_data.get("status") == "success":
+                    payment=Payment.objects.create(
+                        user=user,
+                        reservation=reservation,
+                        reference=reference,
+                        total_amount=total_amount,
+                        house = house
+                    )
+                    payment.Status.PENDING
+                    return Response({
+                        "message": "Reservation updated and payment initiated successfully!",
+                        "customer_id": updated_reservation.id,
+                        "reservation_details": serializer.data,
+                        "payment_link": response_data["data"]["link"],
+                        "reference": reference,
+                    }, status=201)
                     
-                response_paystack = requests.post(paystack_url_initialize, json=data, headers=headers_paystack)
-                response_data_paystack = response_paystack.json()
-                check1= response_data_paystack["data"]["reference"]
-                print(f"check1: {check1}")
-                if response_data_paystack.get("status"):
-                        payment=Payment.objects.create(
-                            user=user,
-                            reservation=reservation,
-                            reference=response_data_paystack["data"]["reference"],
-                            total_amount=total_amount,
-                            house = house
-                        )
-                        payment.Status.PENDING
-                        return Response({
-                            "message": "Reservation updated and payment initiated successfully!",
-                            "customer_id": updated_reservation.id,
-                            "reservation_details": serializer.data,
-                            "payment_link": response_data_paystack["data"]["authorization_url"],
-                            "reference": reference,
-                        }, status=201)
+                # response_paystack = requests.post(paystack_url_initialize, json=data, headers=headers_paystack)
+                # response_data_paystack = response_paystack.json()
+                # check1= response_data_paystack["data"]["reference"]
+                # print(f"check1: {check1}")
+                # if response_data_paystack.get("status"):
+                #         payment=Payment.objects.create(
+                #             user=user,
+                #             reservation=reservation,
+                #             reference=response_data_paystack["data"]["reference"],
+                #             total_amount=total_amount,
+                #             house = house
+                #         )
+                #         payment.Status.PENDING
+                #         return Response({
+                #             "message": "Reservation updated and payment initiated successfully!",
+                #             "customer_id": updated_reservation.id,
+                #             "reservation_details": serializer.data,
+                #             "payment_link": response_data_paystack["data"]["authorization_url"],
+                #             "reference": reference,
+                #         }, status=201)
 
                 return Response({"error": "Failed to initiate payment"}, status=400)    
 
