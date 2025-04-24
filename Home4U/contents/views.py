@@ -256,7 +256,7 @@ class CustomerDetailsHousingView(APIView):
         #post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
         house = ReservationContents.objects.get(id=id)
-        reservation = ReservationDetails.objects.filter(house=house, user=user).last()
+        reservation = ReservationDetails.objects.filter(house=house, user=user)[0]
         
         print(f"reservation_value: {reservation}")
         
@@ -278,6 +278,10 @@ class CustomerDetailsHousingView(APIView):
             email = user.email
             reference = str(uuid.uuid4())
             flutterwave_url = f"{settings.FLW_API_URL}/payments"
+            paystack_url_initialize = f"{settings.PAYSTACK_URL_INITIALIZE}"
+            paystack_url_verify = f"{settings.PAYSTACK_URL_VERIFY}"
+            paystack_secret_key = f"{settings.PAYSTACK_SECRET_KEY}"
+            
             secret_key = settings.FLW_SECRET_KEY
             vercel_url = getattr(settings, "VERCEL_APP_URL", None)
 
@@ -290,34 +294,71 @@ class CustomerDetailsHousingView(APIView):
                 "customer": {"email": user.email,
                              "username":user.first_name}
             }
-
+            
             headers = {
                 "Authorization": f"Bearer {secret_key}",
                 "Content-Type": "application/json",
             }
+            
+            
+            
+            
+            data = {
+                "email": email,
+                "amount": float(total_amount * 100),
+                "reference": reference,
+                "callback_url": f"{vercel_url}/confirmation/",
+            }
+
+            headers_paystack = {
+                    "Authorization": f"Bearer {paystack_secret_key}",
+                    "Content-Type": "application/json",
+            }
 
             try:
-                response = requests.post(flutterwave_url, json=payload, headers=headers)
-                response_data = response.json()
+                # response = requests.post(flutterwave_url, json=payload, headers=headers)
+                # response_data = response.json()
+                
+               
+                # if response.status_code == 200 and response_data.get("status") == "success":
+                #     payment=Payment.objects.create(
+                #         user=user,
+                #         reservation=reservation,
+                #         reference=reference,
+                #         total_amount=total_amount,
+                #         house = house
+                #     )
+                #     payment.Status.PENDING
+                #     return Response({
+                #         "message": "Reservation updated and payment initiated successfully!",
+                #         "customer_id": updated_reservation.id,
+                #         "reservation_details": serializer.data,
+                #         "payment_link": response_data["data"]["link"],
+                #         "reference": reference,
+                #     }, status=201)
+                    
+                response_paystack = requests.post(paystack_url_initialize, json=data, headers=headers_paystack)
+                response_data_paystack = response_paystack.json()
+                check1= response_data_paystack["data"]["reference"]
+                print(f"check1: {check1}")
+                if response_data_paystack.get("status"):
+                        payment=Payment.objects.create(
+                            user=user,
+                            reservation=reservation,
+                            reference=response_data_paystack["data"]["reference"],
+                            total_amount=total_amount,
+                            house = house
+                        )
+                        payment.Status.PENDING
+                        return Response({
+                            "message": "Reservation updated and payment initiated successfully!",
+                            "customer_id": updated_reservation.id,
+                            "reservation_details": serializer.data,
+                            "payment_link": response_data_paystack["data"]["authorization_url"],
+                            "reference": reference,
+                        }, status=201)
 
-                if response.status_code == 200 and response_data.get("status") == "success":
-                    payment=Payment.objects.create(
-                        user=user,
-                        reservation=reservation,
-                        reference=reference,
-                        total_amount=total_amount,
-                        house = house
-                    )
-                    payment.Status.PENDING
-                    return Response({
-                        "message": "Reservation updated and payment initiated successfully!",
-                        "customer_id": updated_reservation.id,
-                        "reservation_details": serializer.data,
-                        "payment_link": response_data["data"]["link"],
-                        "reference": reference,
-                    }, status=201)
-
-                return Response({"error": "Failed to initiate payment"}, status=400)
+                return Response({"error": "Failed to initiate payment"}, status=400)    
 
             except requests.exceptions.RequestException:
                 return Response({"error": "Payment initiation failed"}, status=500)
