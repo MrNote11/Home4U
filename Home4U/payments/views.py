@@ -155,7 +155,7 @@ class PaymentCallback(APIView):
 
         payment = Payment.objects.get(reference=reference, user=request.user)
         reference = payment.reference
-        paystack_url_verify = f"https://api.paystack.co/transaction/verify/{reference}"
+        paystack_url_verify = f"https://api.paystack.co/transaction/verify_by_reference?tx_ref={reference}"
         paystack_secret_key = f"{settings.PAYSTACK_SECRET_KEY}"
         headers_paystack ={
             "Authorization": f"Bearer {paystack_secret_key}",
