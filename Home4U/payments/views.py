@@ -137,76 +137,76 @@ class PaymentCallback(APIView):
 
     def get(self, request):
         tx_ref = request.GET.get('tx_ref')
-        # url = f"https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref={tx_ref}"
-        # headers = {
-        #     "Authorization": f"Bearer {settings.FLW_SECRET_KEY}",
-        #     "Content-Type": "application/json"
-        # }
-        # response = requests.get(url, headers=headers)
+        url = f"https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref={tx_ref}"
+        headers = {
+            "Authorization": f"Bearer {settings.FLW_SECRET_KEY}",
+            "Content-Type": "application/json"
+        }
+        response = requests.get(url, headers=headers)
 
-        # if response.status_code != 200 or not response.text.strip():
-        #     return Response({"error": "Invalid response from Flutterwave"}, status=400)
+        if response.status_code != 200 or not response.text.strip():
+            return Response({"error": "Invalid response from Flutterwave"}, status=400)
 
-        # try:
-        #     response_data = response.json()
-        # except requests.exceptions.JSONDecodeError:
-        #     return Response({"error": "Failed to decode Flutterwave response"}, status=500)
+        try:
+            response_data = response.json()
+        except requests.exceptions.JSONDecodeError:
+            return Response({"error": "Failed to decode Flutterwave response"}, status=500)
         
 
 
-        paystack_url_verify = f"https://api.paystack.co/transaction/verify/{tx_ref}"
-        paystack_secret_key = f"{settings.PAYSTACK_SECRET_KEY}"
-        headers_paystack ={
-            "Authorization": f"Bearer {paystack_secret_key}",
-            "Content-Type": "application/json"
-        }
-        response_paystack_get = requests.get(paystack_url_verify, headers=headers_paystack)
-        res_data = response_paystack_get.json()
+        # paystack_url_verify = f"https://api.paystack.co/transaction/verify/{tx_ref}"
+        # paystack_secret_key = f"{settings.PAYSTACK_SECRET_KEY}"
+        # headers_paystack ={
+        #     "Authorization": f"Bearer {paystack_secret_key}",
+        #     "Content-Type": "application/json"
+        # }
+        # response_paystack_get = requests.get(paystack_url_verify, headers=headers_paystack)
+        # res_data = response_paystack_get.json()
 
-        if res_data["data"]["status"] == "success":
-            # Update payment status in DB here
-            payment = Payment.objects.get(reference=tx_ref)
-            payment.status = Payment.Status.SUCCESSFUL
-            payment.save()
-            return Response({"message": "Payment successful"}, status=200)
-
-        return Response({"error": "Payment failed"}, status=400)
-    
-        # if response_data['data']['status'] == "successful":
-        #     try:
-        #         payment = Payment.objects.get(reference=tx_ref)
-        #         payment.status = Payment.Status.SUCCESSFUL
-        #         payment.save()
-        #         total = payment.total_amount
-        #         user = payment.user
-        #         first_name = user.first_name
-        #         last_name = user.last_name
-        #         email = user.email
-        #         check_in = payment.reservations.check_in
-        #         check_out = payment.reservations.check_out
-        #         guest = payment.reservations.guests
-        #         house = payment.housenames.house
-        #         booking = tx_ref
-        #         print(f'tx_ref: {tx_ref}')
-                
-        #         print(f"email: {email}")
-        #         full_name = f"{first_name} {last_name}"
-        #         print(f"fullname: {full_name}")
-                
-        #         return Response({"message": "Payment was successful",
-        #                          "name": full_name,
-        #                          "email": email,
-        #                          "total":total,
-        #                          "check_in":check_in,
-        #                          "guest":guest,
-        #                          "check_out":check_out,
-        #                          "house":house,
-        #                          "booking":booking}, status=200)
-                
-        #     except Payment.DoesNotExist:
-        #         return Response({"error": "Payment not found"}, status=404)
+        # if res_data["data"]["status"] == "success":
+        #     # Update payment status in DB here
+        #     payment = Payment.objects.get(reference=tx_ref)
+        #     payment.status = Payment.Status.SUCCESSFUL
+        #     payment.save()
+        #     return Response({"message": "Payment successful"}, status=200)
 
         # return Response({"error": "Payment failed"}, status=400)
+    
+        if response_data['data']['status'] == "successful":
+            try:
+                payment = Payment.objects.get(reference=tx_ref)
+                payment.status = Payment.Status.SUCCESSFUL
+                payment.save()
+                total = payment.total_amount
+                user = payment.user
+                first_name = user.first_name
+                last_name = user.last_name
+                email = user.email
+                check_in = payment.reservations.check_in
+                check_out = payment.reservations.check_out
+                guest = payment.reservations.guests
+                house = payment.housenames.house
+                booking = tx_ref
+                print(f'tx_ref: {tx_ref}')
+                
+                print(f"email: {email}")
+                full_name = f"{first_name} {last_name}"
+                print(f"fullname: {full_name}")
+                
+                return Response({"message": "Payment was successful",
+                                 "name": full_name,
+                                 "email": email,
+                                 "total":total,
+                                 "check_in":check_in,
+                                 "guest":guest,
+                                 "check_out":check_out,
+                                 "house":house,
+                                 "booking":booking}, status=200)
+                
+            except Payment.DoesNotExist:
+                return Response({"error": "Payment not found"}, status=404)
+
+        return Response({"error": "Payment failed"}, status=400)
 
     
 
