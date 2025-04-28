@@ -28,7 +28,9 @@ from rest_framework import generics, status, filters
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-
+from django.utils import timezone
+import calendar
+from datetime import date
 
 
 class HomeViews(generics.ListAPIView):
@@ -105,7 +107,7 @@ class BookingViews(APIView):
 
     def get(self, request, *args, **kwargs):
         user = request.user
-        bookings = ReservationDetails.objects.filter(user=user)
+        bookings = ReservationDetails.objects.filter(user=user)[:5]
 
         serializer = BookingSerializer(bookings, many=True)
 
@@ -250,13 +252,49 @@ class CustomerDetailsHousingView(APIView):
     """Handles customer reservation and payment initiation"""
     permission_classes = [IsAuthenticated]
     serializer_class = ReservationDetailSerializer
-
+    def can_make_new_booking(self, user):
+        """
+        Check if user can make a new booking based on their existing bookings.
+        Returns (bool, str): Tuple of (can_book, message)
+        """
+        today = timezone.now().date()
+        
+        # Get user's reservations that are confirmed (have been paid for)
+        active_reservations = ReservationDetails.objects.filter(
+            user=user,
+            booking=True,  # Only consider confirmed bookings
+            check_out__gte=today  # Booking hasn't ended yet
+        )
+        
+        if active_reservations.exists():
+            # Get the latest checkout date
+            latest_reservation = active_reservations.order_by('-check_out').first()
+            
+            # Get the end of the month for the checkout date
+            checkout_date = latest_reservation.check_out
+            end_of_month = date(
+                year=checkout_date.year,
+                month=checkout_date.month,
+                day=calendar.monthrange(checkout_date.year, checkout_date.month)[1]
+            )
+            
+            if today <= end_of_month:
+                return False, f"You can book a new house after {end_of_month.strftime('%Y-%m-%d')}"
+        
+        return True, "User can make a new booking"
+    
     def post(self, request, id):
         """Updates reservation and initiates payment"""
         #post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
         house = ReservationContents.objects.get(id=id)
         reservation = ReservationDetails.objects.filter(house=house, user=user).last()
+        
+        print(f"reservation_value: {reservation}")
+        
+        can_book, message = self.can_make_new_booking(user)
+        if not can_book:
+            return Response({"error": message}, status=400)
         
         print(f"reservation_value: {reservation}")
         
@@ -329,7 +367,10 @@ class CustomerDetailsHousingView(APIView):
                         total_amount=total_amount,
                         house = house
                     )
+                   
                     payment.Status.PENDING
+                    updated_reservation.booking = True
+                    updated_reservation.save()
                     return Response({
                         "message": "Reservation updated and payment initiated successfully!",
                         "customer_id": updated_reservation.id,

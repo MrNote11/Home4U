@@ -304,7 +304,3 @@ cloudinary.config(
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database for sessions
-SESSION_COOKIE_NAME = 'mysessionid'  # Custom session name
-SESSION_COOKIE_AGE = 86400  # 1 day
-SESSION_SAVE_EVERY_REQUEST = True  # Save session on every request

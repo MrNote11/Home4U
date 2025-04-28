@@ -5,6 +5,8 @@ from dateutil.relativedelta import relativedelta
 from cloudinary.models import CloudinaryField
 from django_resized import ResizedImageField
 from django.utils import timezone
+import calendar
+from datetime import date
 
 class ReservationContents(models.Model):
 
