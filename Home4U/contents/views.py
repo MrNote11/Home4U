@@ -252,7 +252,7 @@ class CustomerDetailsHousingView(APIView):
     """Handles customer reservation and payment initiation"""
     permission_classes = [IsAuthenticated]
     serializer_class = ReservationDetailSerializer
-    def can_make_new_booking(self, user):
+    def can_make_new_booking(self, user, house_id):
         """
         Check if user can make a new booking based on their existing bookings.
         Returns (bool, str): Tuple of (can_book, message)
@@ -262,11 +262,12 @@ class CustomerDetailsHousingView(APIView):
         # Get user's reservations that are confirmed (have been paid for)
         active_reservations = ReservationDetails.objects.filter(
             user=user,
+            house_id=house_id,
             booking=True,  # Only consider confirmed bookings
             check_out__gte=today  # Booking hasn't ended yet
         )
         
-        if active_reservations.exists():
+        if active_reservations:
             # Get the latest checkout date
             latest_reservation = active_reservations.order_by('-check_out').first()
             
@@ -292,7 +293,7 @@ class CustomerDetailsHousingView(APIView):
         
         print(f"reservation_value: {reservation}")
         
-        can_book, message = self.can_make_new_booking(user)
+        can_book, message = self.can_make_new_booking(user, id)
         if not can_book:
             return Response({"error": message}, status=400)
         
