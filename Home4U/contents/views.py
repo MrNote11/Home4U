@@ -30,7 +30,8 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 import calendar
-from datetime import date
+from datetime import datetime, date, time
+
 
 
 class HomeViews(generics.ListAPIView):
@@ -214,197 +215,442 @@ new_post = NewHousingContentsViewList.as_view()
 
 
 
+
 class CreateGuests(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = GuestsSerializers
     
     def post(self, request, post_pk):
         user = request.user
-        house = get_object_or_404(ReservationContents, id=post_pk)
         
-        # Initialize the serializer with the incoming data
-        serializer = self.serializer_class(data=request.data)
-        
-        if serializer.is_valid():
-            # Save the reservation instance with the provided data
-            reservation = serializer.save(house=house, user=user)
-            reservation.booking = True
-            reservation.save()
+        try:
+            house = get_object_or_404(ReservationContents, id=post_pk)
             
-            # Calculate the total price after saving
-            total_price = reservation.calculate_total_price()
+            # Check if the user already has an active booking for this house
+            active_booking = ReservationDetails.objects.filter(
+                house=house,
+                user=user,
+                booking=True,  # Only consider confirmed bookings
+                check_out__gte=timezone.now().date()  # Booking hasn't ended yet
+            ).exists()
             
-            return Response(
-                {
-                    "message": "Reservation and Payment initiated successfully.",
-                    "reservation_details": serializer.data,
-                    "payment": total_price
-                },
-                status=status.HTTP_201_CREATED,
-            )
-        return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-    
-    
-
+            if active_booking:
+                return Response(
+                    {"error": "You already have an active booking for this house"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+            # Initialize the serializer with the incoming data
+            serializer = self.serializer_class(data=request.data)
+            
+            if serializer.is_valid():
+                # Save the reservation instance with the provided data
+                # Set booking=False initially since payment hasn't been made yet
+                reservation = serializer.save(house=house, user=user, booking=False)
+                
+                # Calculate the total price after saving
+                total_price = reservation.calculate_total_price()
+                
+                return Response(
+                    {
+                        "message": "Reservation created successfully. Please proceed to payment.",
+                        "reservation_details": serializer.data,
+                        "payment": total_price,
+                        "reservation_id": reservation.id
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            
+        except ReservationContents.DoesNotExist:
+            return Response({"error": "House not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CustomerDetailsHousingView(APIView):
     """Handles customer reservation and payment initiation"""
     permission_classes = [IsAuthenticated]
     serializer_class = ReservationDetailSerializer
-    def can_make_new_booking(self, user, house_id):
+    
+    def check_conflicting_bookings(self, house_id, check_in, check_out, current_reservation_id=None):
         """
-        Check if user can make a new booking based on their existing bookings.
-        Returns (bool, str): Tuple of (can_book, message)
+        Check if there are any conflicting bookings for the house during the specified period.
+        Excludes the current reservation if updating.
         """
-        today = timezone.now().date()
-        
-        # Get user's reservations that are confirmed (have been paid for)
-        active_reservations = ReservationDetails.objects.filter(
-            user=user,
+        conflicting_reservations = ReservationDetails.objects.filter(
             house_id=house_id,
             booking=True,  # Only consider confirmed bookings
-            check_out__gte=today  # Booking hasn't ended yet
+            check_out__gt=check_in,  # Checkout date is after the requested check-in
+            check_in__lt=check_out   # Check-in date is before the requested checkout
         )
         
-        if active_reservations:
-            # Get the latest checkout date
-            latest_reservation = active_reservations.order_by('-check_out').first()
+        # If we're updating an existing reservation, exclude it from the conflict check
+        if current_reservation_id:
+            conflicting_reservations = conflicting_reservations.exclude(id=current_reservation_id)
             
-            # Get the end of the month for the checkout date
-            checkout_date = latest_reservation.check_out
-            end_of_month = date(
-                year=checkout_date.year,
-                month=checkout_date.month,
-                day=calendar.monthrange(checkout_date.year, checkout_date.month)[1]
-            )
+        # If any conflicting reservations exist, return False with a message
+        if conflicting_reservations.exists():
+            return False, "This house is already booked for the selected dates."
             
-            if today <= end_of_month:
-                return False, f"You can book a new house after {end_of_month.strftime('%Y-%m-%d')}"
-        
-        return True, "User can make a new booking"
+        return True, "No conflicting bookings found."
+    
+    
     
     def post(self, request, id):
         """Updates reservation and initiates payment"""
-        #post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
         user = request.user
-        house = ReservationContents.objects.get(id=id)
-        reservation = ReservationDetails.objects.filter(house=house, user=user).last()
         
-        print(f"reservation_value: {reservation}")
-        
-        can_book, message = self.can_make_new_booking(user, id)
-        if not can_book:
-            return Response({"error": message}, status=400)
-        
-        print(f"reservation_value: {reservation}")
-        
-        serializer = ReservationDetailSerializer(
-            reservation,
-            data=request.data,
-            context={'user': user},
-            partial=True
-        )
-        print(serializer)
-
-        if serializer.is_valid():
-            updated_reservation = serializer.save()
-            reference = str(uuid.uuid4())
-            total_amount = updated_reservation.calculate_total_price()
-            print(total_amount)
-
-            # Initiate payment
-            email = user.email
-            reference = str(uuid.uuid4())
-            flutterwave_url = f"{settings.FLW_API_URL}/payments"
-            paystack_url_initialize = f"{settings.PAYSTACK_URL_INITIALIZE}"
-            paystack_url_verify = f"{settings.PAYSTACK_URL_VERIFY}"
-            paystack_secret_key = f"{settings.PAYSTACK_SECRET_KEY}"
+        try:
+            house = get_object_or_404(ReservationContents, id=id)
             
-            secret_key = settings.FLW_SECRET_KEY
-            vercel_url = getattr(settings, "VERCEL_APP_URL", None)
-
-            payload = {
-                "tx_ref": reference,
-                "amount": float(total_amount),
-                "currency": "NGN",
-                "redirect_url": f"{vercel_url}/confirmation/",
-                "payment_type": "card",
-                "customer": {"email": user.email,
-                             "username":user.first_name}
-            }
-            
-            headers = {
-                "Authorization": f"Bearer {secret_key}",
-                "Content-Type": "application/json",
-            }
-            
-            
-            
-            
-            data = {
-                "tx_ref": reference,
-                "email": email,
-                "amount": float(total_amount * 100),
-                "reference": reference,
-                "callback_url": f"{vercel_url}/confirmation/",
-            }
-
-            headers_paystack = {
-                    "Authorization": f"Bearer {paystack_secret_key}",
-                    "Content-Type": "application/json",
-            }
-
+            # Find the user's pending reservation for this house
             try:
-                response = requests.post(flutterwave_url, json=payload, headers=headers)
-                response_data = response.json()
+                # Get the latest reservation that hasn't been confirmed yet (booking=False)
+                # or the reservation being explicitly updated by ID
+                reservation_id = request.data.get('reservation_id')
+                
+                if reservation_id:
+                    # If a specific reservation ID is provided, use that one
+                    reservation = get_object_or_404(
+                        ReservationDetails, 
+                        id=reservation_id, 
+                        house=house,
+                        user=user
+                    )
+                else:
+                    # Otherwise, get the latest unconfirmed reservation
+                    reservation = ReservationDetails.objects.filter(
+                        house=house, 
+                        user=user,
+                        booking=False
+                    ).latest('created')  # Try using created_at field
+            except (ReservationDetails.DoesNotExist):
+                try:
+                    # Try with 'created' field if 'created_at' doesn't exist
+                    reservation = ReservationDetails.objects.filter(
+                        house=house, 
+                        user=user,
+                        booking=False
+                    ).latest('created')
+                except ReservationDetails.DoesNotExist:
+                    return Response(
+                        {"error": "No pending reservation found. Please create a reservation first."},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            
+            # Check for booking date conflicts if dates are being updated
+            check_in = request.data.get('check_in') or reservation.check_in
+            check_out = request.data.get('check_out') or reservation.check_out
+            
+            if check_in and check_out:
+                # Convert string dates to date objects if needed
+                if isinstance(check_in, str):
+                    check_in = datetime.strptime(check_in, '%Y-%m-%d').date()
+                if isinstance(check_out, str):
+                    check_out = datetime.strptime(check_out, '%Y-%m-%d').date()
+                    
+                # Check for booking conflicts
+                can_book, message = self.check_conflicting_bookings(
+                    house.id, 
+                    check_in, 
+                    check_out,
+                    reservation.id
+                )
+                
+                if not can_book:
+                    return Response({"error": message}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Initialize serializer with the reservation and request data
+            serializer = self.serializer_class(
+                reservation,
+                data=request.data,
+                context={'user': user},
+                partial=True
+            )
+            
+            if serializer.is_valid():
+                updated_reservation = serializer.save()
+                reference = str(uuid.uuid4())
+                total_amount = updated_reservation.calculate_total_price()
+                
+                # Initiate payment
+                email = user.email
+                flutterwave_url = f"{settings.FLW_API_URL}/payments"
+                secret_key = settings.FLW_SECRET_KEY
+                vercel_url = getattr(settings, "VERCEL_APP_URL", None)
+                
+                payload = {
+                    "tx_ref": reference,
+                    "amount": float(total_amount),
+                    "currency": "NGN",
+                    "redirect_url": f"{vercel_url}/confirmation/",
+                    "payment_type": "card",
+                    "customer": {
+                        "email": user.email,
+                        "username": user.first_name
+                    }
+                }
+                
+                headers = {
+                    "Authorization": f"Bearer {secret_key}",
+                    "Content-Type": "application/json",
+                }
+                
+                try:
+                    response = requests.post(flutterwave_url, json=payload, headers=headers)
+                    response_data = response.json()
+                    
+                    if response.status_code == 200 and response_data.get("status") == "success":
+                        payment = Payment.objects.create(
+                            user=user,
+                            reservation=updated_reservation,
+                            reference=reference,
+                            total_amount=total_amount,
+                            house=house
+                        )
+                        
+                        # Fix: Correctly set payment status
+                        payment.status = Payment.Status.PENDING
+                        payment.save()
+                        
+                        # Only set booking=True after payment is initiated
+                        updated_reservation.booking = True
+                        updated_reservation.save()
+                        
+                        return Response({
+                            "message": "Reservation updated and payment initiated successfully!",
+                            "customer_id": updated_reservation.id,
+                            "reservation_details": serializer.data,
+                            "payment_link": response_data["data"]["link"],
+                            "reference": reference,
+                        }, status=status.HTTP_201_CREATED)
+                    
+                    return Response(
+                        {"error": "Failed to initiate payment", "details": response_data}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                    
+                except requests.exceptions.RequestException as e:
+                    return Response(
+                        {"error": "Payment initiation failed", "details": str(e)}, 
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        except ReservationContents.DoesNotExist:
+            return Response({"error": "House not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+# class CreateGuests(APIView):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = GuestsSerializers
+    
+#     def post(self, request, post_pk):
+#         user = request.user
+        
+#         try:
+#             house = get_object_or_404(ReservationContents, id=post_pk)
+            
+#             # Check if the user already has an active booking for this house
+#             active_booking = ReservationDetails.objects.filter(
+#                 house=house,
+#                 user=user,
+#                 booking=True,
+#                 check_out__gte=timezone.now().date()
+#             ).exists()
+            
+#             if active_booking:
+#                 return Response(
+#                     {"error": "You already have an active booking for this house"}, 
+#                     status=status.HTTP_400_BAD_REQUEST
+#                 )
+                
+#             # Initialize the serializer with the incoming data
+#             serializer = self.serializer_class(data=request.data)
+            
+#             if serializer.is_valid():
+#                 # Save the reservation instance with the provided data
+#                 reservation = serializer.save(house=house, user=user)
+#                 reservation.booking = True
+#                 reservation.save()
+                
+#                 # Calculate the total price after saving
+#                 total_price = reservation.calculate_total_price()
+                
+#                 return Response(
+#                     {
+#                         "message": "Reservation and Payment initiated successfully.",
+#                         "reservation_details": serializer.data,
+#                         "payment": total_price
+#                     },
+#                     status=status.HTTP_201_CREATED,
+#                 )
+#             return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            
+#         except ReservationContents.DoesNotExist:
+#             return Response({"error": "House not found"}, status=status.HTTP_404_NOT_FOUND)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    
+    
+    
+
+# class CustomerDetailsHousingView(APIView):
+#     """Handles customer reservation and payment initiation"""
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = ReservationDetailSerializer
+    
+#     def check_conflicting_bookings(self, house_id, check_in, check_out, current_reservation_id=None):
+#         """
+#         Check if there are any conflicting bookings for the house during the specified period.
+#         Excludes the current reservation if updating.
+#         """
+#         conflicting_reservations = ReservationDetails.objects.filter(
+#             house_id=house_id,
+#             booking=True,  # Only consider confirmed bookings
+#             check_out__gt=check_in,  # Checkout date is after the requested check-in
+#             check_in__lt=check_out   # Check-in date is before the requested checkout
+#         )
+        
+#         # If we're updating an existing reservation, exclude it from the conflict check
+#         if current_reservation_id:
+#             conflicting_reservations = conflicting_reservations.exclude(id=current_reservation_id)
+            
+#         # If any conflicting reservations exist, return False with a message
+#         if conflicting_reservations.exists():
+#             return False, "This house is already booked for the selected dates."
+            
+#         return True, "No conflicting bookings found."
+    
+    
+    
+    
+#     def post(self, request, id):
+#         """Updates reservation and initiates payment"""
+#         #post = get_object_or_404(ReservationContents, id=post_id)  # Ensure post exists
+#         user = request.user
+#         house = ReservationContents.objects.get(id=id)
+#         reservation = ReservationDetails.objects.filter(house=house, user=user).latest('created')
+#         date_fix = reservation.check_out
+        
+#         can_book, message = self.can_make_new_booking(id, user.id)
+#         if not can_book:
+#             return Response({"error": message}, status=400)
+        
+#         if reservation:
+#             print(f"reservation_value: {reservation}")
+#             print(f"check_out_now: {date_fix}")
+#         serializer = ReservationDetailSerializer(
+#             reservation,
+#             data=request.data,
+#             context={'user': user},
+#             partial=True
+#         )
+#         print(serializer)
+
+#         if serializer.is_valid():
+#             updated_reservation = serializer.save()
+#             reference = str(uuid.uuid4())
+#             total_amount = updated_reservation.calculate_total_price()
+#             print(total_amount)
+
+#             # Initiate payment
+#             email = user.email
+#             reference = str(uuid.uuid4())
+#             flutterwave_url = f"{settings.FLW_API_URL}/payments"
+#             paystack_url_initialize = f"{settings.PAYSTACK_URL_INITIALIZE}"
+#             paystack_url_verify = f"{settings.PAYSTACK_URL_VERIFY}"
+#             paystack_secret_key = f"{settings.PAYSTACK_SECRET_KEY}"
+            
+#             secret_key = settings.FLW_SECRET_KEY
+#             vercel_url = getattr(settings, "VERCEL_APP_URL", None)
+
+#             payload = {
+#                 "tx_ref": reference,
+#                 "amount": float(total_amount),
+#                 "currency": "NGN",
+#                 "redirect_url": f"{vercel_url}/confirmation/",
+#                 "payment_type": "card",
+#                 "customer": {"email": user.email,
+#                              "username":user.first_name}
+#             }
+            
+#             headers = {
+#                 "Authorization": f"Bearer {secret_key}",
+#                 "Content-Type": "application/json",
+#             }
+            
+            
+            
+            
+#             data = {
+#                 "tx_ref": reference,
+#                 "email": email,
+#                 "amount": float(total_amount * 100),
+#                 "reference": reference,
+#                 "callback_url": f"{vercel_url}/confirmation/",
+#             }
+
+#             headers_paystack = {
+#                     "Authorization": f"Bearer {paystack_secret_key}",
+#                     "Content-Type": "application/json",
+#             }
+
+#             try:
+#                 response = requests.post(flutterwave_url, json=payload, headers=headers)
+#                 response_data = response.json()
                 
                
-                if response.status_code == 200 and response_data.get("status") == "success":
-                    payment=Payment.objects.create(
-                        user=user,
-                        reservation=reservation,
-                        reference=reference,
-                        total_amount=total_amount,
-                        house = house
-                    )
+#                 if response.status_code == 200 and response_data.get("status") == "success":
+#                     payment=Payment.objects.create(
+#                         user=user,
+#                         reservation=reservation,
+#                         reference=reference,
+#                         total_amount=total_amount,
+#                         house = house
+#                     )
                    
-                    payment.Status.PENDING
-                    updated_reservation.booking = True
-                    updated_reservation.save()
-                    return Response({
-                        "message": "Reservation updated and payment initiated successfully!",
-                        "customer_id": updated_reservation.id,
-                        "reservation_details": serializer.data,
-                        "payment_link": response_data["data"]["link"],
-                        "reference": reference,
-                    }, status=201)
+#                     payment.Status.PENDING
+#                     updated_reservation.booking = True
+#                     updated_reservation.save()
+#                     return Response({
+#                         "message": "Reservation updated and payment initiated successfully!",
+#                         "customer_id": updated_reservation.id,
+#                         "reservation_details": serializer.data,
+#                         "payment_link": response_data["data"]["link"],
+#                         "reference": reference,
+#                     }, status=201)
                     
-                # response_paystack = requests.post(paystack_url_initialize, json=data, headers=headers_paystack)
-                # response_data_paystack = response_paystack.json()
-                # check1= response_data_paystack["data"]["reference"]
-                # print(f"reference: {reference}")
-                # print(f"check1: {check1}")
-                # if response_paystack.status_code ==200 and response_data_paystack.get("status") == "success":
-                #         payment=Payment.objects.create(
-                #             user=user,
-                #             reservation=reservation,
-                #             reference=response_data_paystack["data"]["reference"],
-                #             total_amount=total_amount,
-                #             house = house
-                #         )
-                #         payment.Status.PENDING
-                #         return Response({
-                #             "message": "Reservation updated and payment initiated successfully!",
-                #             "customer_id": updated_reservation.id,
-                #             "reservation_details": serializer.data,
-                #             "payment_link": response_data_paystack["data"]["authorization_url"],
-                #             "reference": reference,
-                #         }, status=201)
+#                 # response_paystack = requests.post(paystack_url_initialize, json=data, headers=headers_paystack)
+#                 # response_data_paystack = response_paystack.json()
+#                 # check1= response_data_paystack["data"]["reference"]
+#                 # print(f"reference: {reference}")
+#                 # print(f"check1: {check1}")
+#                 # if response_paystack.status_code ==200 and response_data_paystack.get("status") == "success":
+#                 #         payment=Payment.objects.create(
+#                 #             user=user,
+#                 #             reservation=reservation,
+#                 #             reference=response_data_paystack["data"]["reference"],
+#                 #             total_amount=total_amount,
+#                 #             house = house
+#                 #         )
+#                 #         payment.Status.PENDING
+#                 #         return Response({
+#                 #             "message": "Reservation updated and payment initiated successfully!",
+#                 #             "customer_id": updated_reservation.id,
+#                 #             "reservation_details": serializer.data,
+#                 #             "payment_link": response_data_paystack["data"]["authorization_url"],
+#                 #             "reference": reference,
+#                 #         }, status=201)
 
-                return Response({"error": "Failed to initiate payment"}, status=400)    
+#                 return Response({"error": "Failed to initiate payment"}, status=400)    
 
-            except requests.exceptions.RequestException:
-                return Response({"error": "Payment initiation failed"}, status=500)
+#             except requests.exceptions.RequestException:
+#                 return Response({"error": "Payment initiation failed"}, status=500)
 
-        return Response(serializer.errors, status=400)
+#         return Response(serializer.errors, status=400)

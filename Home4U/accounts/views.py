@@ -88,57 +88,57 @@ signup = UserRegister.as_view()
 
 
 
-class ResendOTPView(APIView):
-    serializer_class = ResendOTPSerializer
+# class ResendOTPView(APIView):
+#     serializer_class = ResendOTPSerializer
     
 
-    def post(self, request):
-        serializer = self.serializer_class(data=request.data)
+#     def post(self, request):
+#         serializer = self.serializer_class(data=request.data)
 
-        if serializer.is_valid(raise_exception=True):
-            email = serializer.validated_data['email']
-            purpose = VerificationToken.Choices.REGISTRATION
-            print(f"email: {email}")
-            try:
-                # ✅ Corrected line
-                user = User.objects.get(email=email)
+#         if serializer.is_valid(raise_exception=True):
+#             email = serializer.validated_data['email']
+#             purpose = VerificationToken.Choices.REGISTRATION
+#             print(f"email: {email}")
+#             try:
+#                 # ✅ Corrected line
+#                 user = User.objects.get(email=email)
 
-                # Delete expired tokens
-                VerificationToken.objects.filter(
-                    user=user,
-                    is_used=False
-                ).exclude(
-                    expires_at__gte=timezone.now()
-                ).delete()
+#                 # Delete expired tokens
+#                 VerificationToken.objects.filter(
+#                     user=user,
+#                     is_used=False
+#                 ).exclude(
+#                     expires_at__gte=timezone.now()
+#                 ).delete()
 
-                # Create a new token
-                token = VerificationToken.objects.create(user=user, purpose=purpose)
-                uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+#                 # Create a new token
+#                 token = VerificationToken.objects.create(user=user, purpose=purpose)
+#                 uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
 
-                verification_link = request.build_absolute_uri(
-                    reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token.token})
-                )
+#                 verification_link = request.build_absolute_uri(
+#                     reverse('verify-otp', kwargs={'uidb64': uidb64, 'token': token.token})
+#                 )
 
-                send_mail(
-                    'Verify Your Account (New OTP)',
-                    f'Click the following link within 11 minutes to verify your account: {verification_link}',
-                    settings.EMAIL_HOST_USER,
-                    [user.email],
-                    fail_silently=False
-                )
+#                 send_mail(
+#                     'Verify Your Account (New OTP)',
+#                     f'Click the following link within 11 minutes to verify your account: {verification_link}',
+#                     settings.EMAIL_HOST_USER,
+#                     [user.email],
+#                     fail_silently=False
+#                 )
 
-                return Response(
-                    {"message": "New verification link sent successfully."},
-                    status=status.HTTP_200_OK
-                )
+#                 return Response(
+#                     {"message": "New verification link sent successfully."},
+#                     status=status.HTTP_200_OK
+#                 )
 
-            except User.DoesNotExist:
-                return Response(
-                    {"message": "User not found."},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+#             except User.DoesNotExist:
+#                 return Response(
+#                     {"message": "User not found."},
+#                     status=status.HTTP_404_NOT_FOUND
+#                 )
 
-resend_otp = ResendOTPView.as_view()
+# resend_otp = ResendOTPView.as_view()
 
 
 
