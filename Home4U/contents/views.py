@@ -324,7 +324,7 @@ class CustomerDetailsHousingView(APIView):
                         house=house, 
                         user=user,
                         booking=False
-                    ).latest('created')  # Try using created_at field
+                    ).last()  # Try using created_at field
             except (ReservationDetails.DoesNotExist):
                 try:
                     # Try with 'created' field if 'created_at' doesn't exist
